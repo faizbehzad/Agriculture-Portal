@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Farmers Directory{% endblock %}
+{% block page_title %}Farmers Directory{% endblock %}
+
+{% block top_actions %}
+{% if current_user.has_perm('farmer_edit') %}
+<a href="{{ url_for('farmer_form') }}" class="btn btn-primary">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+  Add Farmer Profile
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .farmer-card {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    border: 1px solid #E2E8F0;
+    padding: 1.35rem;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-bounce);
+    position: relative;
+  }
+
+  .farmer-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--emerald-400);
+  }
+
+  .farmer-avatar-glow {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--emerald-50);
+    flex-shrink: 0;
+    border: 2px solid var(--emerald-400);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--emerald-700);
+    font-size: 1.1rem;
+  }
+</style>
+
+<!-- SEARCH & TOOLBAR CARD -->
+<div class="card mb-4" style="padding: 1rem 1.25rem;">
+  <form method="GET" action="{{ url_for('farmers_list') }}"
+    style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex: 1; min-width: 250px;">
+      <input type="text" name="search" class="form-control"
+        placeholder="Search by name, Farmer ID (middle 7 digits) or CNIC..." value="{{ search }}">
+      <button type="submit" class="btn btn-secondary">Search</button>
+      {% if search %}
+      <a href="{{ url_for('farmers_list') }}" class="btn btn-icon" title="Clear search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </a>
+      {% endif %}
+    </div>
+
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <!-- Pagination Selector -->
+      <select name="per_page" class="form-control" style="width: auto;" onchange="this.form.submit()">
+        <option value="30" {% if per_page=='30' %}selected{% endif %}>30 per page</option>
+        <option value="50" {% if per_page=='50' %}selected{% endif %}>50 per page</option>
+        <option value="100" {% if per_page=='100' %}selected{% endif %}>100 per page</option>
+        <option value="all" {% if per_page=='all' %}selected{% endif %}>Show All</option>
+      </select>
+
+      <!-- View Mode Toggle Buttons -->
+      <div style="display: flex; gap: 0.25rem;">
+        <button type="button" id="view-toggle-grid" class="btn btn-primary btn-sm btn-icon" title="Grid View">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+        </button>
+        <button type="button" id="view-toggle-list" class="btn btn-secondary btn-sm btn-icon" title="List View">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- GRID VIEW -->
+<div id="farmers-grid-view"
+  style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+  {% for item in farmers %}
+  {% set f = item.farmer %}
+  <div class="farmer-card">
+    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.85rem;">
+      <div class="farmer-avatar-glow">
+        {% if f.photo_path %}
+        <img src="{{ url_for('serve_upload', filename=f.photo_path) }}" alt="{{ f.full_name }}"
+          style="width: 100%; height: 100%; object-fit: cover;">
+        {% else %}
+        {{ f.full_name[:2].upper() }}
+        {% endif %}
+      </div>
+      <div>
+        <h4 style="font-size: 1.05rem; color: var(--ink-900); margin-bottom: 0.15rem;">{{ f.full_name }}</h4>
+        <div style="font-size: 0.8rem; color: var(--ink-500);">ID: <strong style="color: var(--emerald-700);">{{
+            f.farmer_id }}</strong></div>
+        <div style="font-size: 0.78rem; color: var(--ink-500);">CNIC: {{ f.cnic }}</div>
+      </div>
+    </div>
+
+    <!-- Phone & Land Holding Badges -->
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+      <span
+        style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: #F1F5F9; border-radius: var(--radius-sm); color: var(--ink-700); font-weight: 600;">
+        📞 {{ item.phone }}
+      </span>
+      {% if f.land_value %}
+      <span
+        style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: var(--emerald-50); border-radius: var(--radius-sm); color: var(--emerald-700); font-weight: 600;">
+        🌾 {{ f.land_value }} {{ f.land_unit|title }}
+      </span>
+      {% endif %}
+    </div>
+
+    <div
+      style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #F1F5F9;">
+      <div>
+        {% if item.latest_program %}
+        <span class="status-pill"
+          style="font-size: 0.72rem; background-color: {{ item.latest_program_color }}1A; color: {{ item.latest_program_color }}; border: 1px solid {{ item.latest_program_color }}44;">
+          {{ item.latest_program }} {% if item.prog_count > 1 %}+{{ item.prog_count - 1 }}{% endif %}
+        </span>
+        {% else %}
+        <span style="color: var(--ink-500); font-size: 0.75rem;">No scheme</span>
+        {% endif %}
+      </div>
+      <span class="status-pill {{ item.status }}">
+        {{ item.status|title }}
+      </span>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+      <span style="font-size: 0.75rem; color: var(--ink-500);">Updated {{ f.updated_at|relative_time }}</span>
+      <div style="display: flex; gap: 0.25rem;">
+        <button onclick="loadViewModal({{ f.id }})" class="btn-icon" title="View Profile">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+        {% if current_user.has_perm('farmer_edit') %}
+        <a href="{{ url_for('farmer_form', id=f.id) }}" class="btn-icon" title="Edit">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+        </a>
+        {% endif %}
+        {% if current_user.has_perm('farmer_delete') %}
+        <form method="POST" action="{{ url_for('farmer_delete', id=f.id) }}"
+          onsubmit="return confirm('Are you sure you want to delete this farmer?');" style="display: inline;">
+          <button type="submit" class="btn-icon text-danger" title="Delete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 12px;">
+    <p style="color: var(--ink-500);">No farmers found matching query.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- LIST VIEW -->
+<div id="farmers-list-view" class="table-container" style="display: none;">
+  <table class="table table-responsive-cards">
+    <thead>
+      <tr>
+        <th>Farmer</th>
+        <th>Farmer ID</th>
+        <th>CNIC</th>
+        <th>Primary Phone</th>
+        <th>Status</th>
+        <th>Last Updated</th>
+        <th style="text-align: right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in farmers %}
+      {% set f = item.farmer %}
+      <tr>
+        <td data-label="Farmer">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div
+              style="width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: var(--emerald-50); border: 1px solid var(--emerald-400); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--emerald-700);">
+              {% if f.photo_path %}
+              <img src="{{ url_for('serve_upload', filename=f.photo_path) }}" alt="{{ f.full_name }}"
+                style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              {{ f.full_name[:2].upper() }}
+              {% endif %}
+            </div>
+            <div>
+              <strong>{{ f.full_name }}</strong> <span
+                style="font-size: 0.75rem; color: var(--emerald-600); font-weight: 600;">(Farmer)</span>
+              <div style="font-size: 0.78rem; color: var(--ink-500);">S/O {{ f.father_name }}</div>
+            </div>
+          </div>
+        </td>
+        <td data-label="Farmer ID"><strong style="color: var(--emerald-700);">{{ f.farmer_id }}</strong></td>
+        <td data-label="CNIC">{{ f.cnic }}</td>
+        <td data-label="Primary Phone">{{ item.phone }}</td>
+        <td data-label="Status">
+          <span class="status-pill {{ item.status }}">{{ item.status|title }}</span>
+        </td>
+        <td data-label="Last Updated">{{ f.updated_at|relative_time }}</td>
+        <td data-label="Actions" style="text-align: right;">
+          <div style="display: inline-flex; gap: 0.25rem;">
+            <button onclick="loadViewModal({{ f.id }})" class="btn-icon" title="View Profile">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            {% if current_user.has_perm('farmer_edit') %}
+            <a href="{{ url_for('farmer_form', id=f.id) }}" class="btn-icon" title="Edit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </a>
+            {% endif %}
+            {% if current_user.has_perm('farmer_delete') %}
+            <form method="POST" action="{{ url_for('farmer_delete', id=f.id) }}"
+              onsubmit="return confirm('Are you sure?');" style="display: inline;">
+              <button type="submit" class="btn-icon text-danger" title="Delete">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Backdrop for Profile Eye Popup -->
+<div id="view-modal-backdrop" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">Farmer Profile Details</h3>
+      <button type="button" class="btn-icon" onclick="closeModal('view-modal-backdrop')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body" id="view-modal-content">
+      <div style="text-align: center; padding: 2rem;">Loading profile data...</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function loadViewModal(id) {
+    openModal('view-modal-backdrop');
+    fetch(`/farmers/${id}/view-modal`)
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('view-modal-content').innerHTML = html;
+      });
+  }
+</script>
+{% endblock %}

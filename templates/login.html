@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Sign In — AE Portal{% endblock %}
+
+{% block content %}
+<style>
+/* Modern Glassmorphic Login Override */
+body {
+  background: radial-gradient(circle at 50% 20%, #0D2D1F 0%, #061A11 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar, .top-header { display: none !important; }
+.main-wrapper { margin-left: 0 !important; width: 100% !important; }
+.content-body { padding: 1.5rem !important; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2.75rem 2.25rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(16, 185, 129, 0.2);
+  animation: fadeInUp 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-hero {
+  text-align: center;
+  margin-bottom: 2.25rem;
+}
+
+.brand-hero-badge {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 1.25rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--emerald-500), var(--emerald-700));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-glow);
+}
+
+.brand-hero-badge img {
+  width: 34px;
+  height: 34px;
+}
+
+.brand-hero h2 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--ink-900);
+  letter-spacing: -0.03em;
+}
+
+.brand-hero p {
+  color: var(--ink-500);
+  font-size: 0.88rem;
+  margin-top: 0.25rem;
+}
+
+.input-focus-glow:focus {
+  border-color: var(--emerald-500) !important;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25) !important;
+}
+</style>
+
+<div class="login-card">
+  <div class="brand-hero">
+    <div class="brand-hero-badge">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="AE Portal Logo">
+    </div>
+    <h2>Agricultural Engineering Portal</h2>
+    <p>Sign in with your administrative credentials</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('login') }}">
+    <div class="form-group mb-3">
+      <label class="form-label" for="email">Email Address</label>
+      <input type="email" id="email" name="email" class="form-control input-focus-glow" placeholder="umar@atechabad.com" required autofocus>
+    </div>
+
+    <div class="form-group mb-4">
+      <label class="form-label" for="password">Password</label>
+      <input type="password" id="password" name="password" class="form-control input-focus-glow" placeholder="••••••••" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 0.95rem; font-weight: 700;">
+      Sign In to Portal
+    </button>
+  </form>
+
+  <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #E2E8F0; text-align: center; font-size: 0.78rem; color: var(--ink-500);">
+    Government of Punjab — Department of Agriculture
+  </div>
+</div>
+{% endblock %}

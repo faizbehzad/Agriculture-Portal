@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ program.name }} — Media Gallery{% endblock %}
+{% block page_title %}{{ program.name }} Gallery{% endblock %}
+
+{% block top_actions %}
+<button class="btn btn-primary" onclick="openModal('upload-media-modal')">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  Upload Media
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4" style="border-left: 6px solid {{ program.color_hex }};">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h2 style="font-size: 1.35rem; color: var(--ink-900);">{{ program.name }} ({{ program.year }})</h2>
+      <p style="color: var(--ink-500); font-size: 0.88rem;">Public Program Media Repository</p>
+    </div>
+
+    <form method="GET" action="{{ url_for('program_gallery', id=program.id) }}" style="display: flex; gap: 0.75rem; align-items: center;">
+      <!-- Type Filter -->
+      <select name="type" class="form-control" style="width: auto;" onchange="this.form.submit()">
+        <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Types</option>
+        <option value="image" {% if filter_type == 'image' %}selected{% endif %}>Images</option>
+        <option value="video" {% if filter_type == 'video' %}selected{% endif %}>Videos</option>
+        <option value="audio" {% if filter_type == 'audio' %}selected{% endif %}>Audio</option>
+        <option value="document" {% if filter_type == 'document' %}selected{% endif %}>Documents</option>
+      </select>
+
+      <!-- Sort Filter -->
+      <select name="sort" class="form-control" style="width: auto;" onchange="this.form.submit()">
+        <option value="newest" {% if sort_order == 'newest' %}selected{% endif %}>Newest First</option>
+        <option value="oldest" {% if sort_order == 'oldest' %}selected{% endif %}>Oldest First</option>
+        <option value="name" {% if sort_order == 'name' %}selected{% endif %}>By Name</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- Media Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem;">
+  {% for media in media_items %}
+  <div class="card" style="padding: 0.85rem; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
+    <div style="height: 140px; background: #0F172A; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; position: relative;">
+      {% if media.file_type == 'image' %}
+        {% if media.thumb_path %}
+        <img src="{{ url_for('serve_upload', filename=media.thumb_path) }}" alt="{{ media.original_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+        {% else %}
+        <img src="{{ url_for('serve_upload', filename=media.file_path) }}" alt="{{ media.original_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+        {% endif %}
+      {% elif media.file_type == 'video' %}
+        <video preload="metadata" muted style="width: 100%; height: 100%; object-fit: cover;">
+          <source src="{{ url_for('serve_upload', filename=media.file_path) }}" type="{{ media.mime_type }}">
+        </video>
+        <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+      {% elif media.file_type == 'audio' %}
+        <div style="text-align: center; color: var(--emerald-400);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <div style="font-size: 0.72rem; font-weight: 700; margin-top: 0.2rem; color: #FFFFFF;">AUDIO</div>
+        </div>
+      {% else %}
+        <div style="text-align: center; color: var(--emerald-400);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div style="font-size: 0.72rem; font-weight: 700; margin-top: 0.2rem; color: #FFFFFF;">DOCUMENT</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div>
+      <h5 style="font-size: 0.88rem; color: var(--ink-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ media.original_name }}">
+        {{ media.original_name }}
+      </h5>
+      <div style="font-size: 0.75rem; color: var(--ink-500); display: flex; justify-content: space-between; margin-top: 0.25rem;">
+        <span>{{ (media.size_bytes / 1024 / 1024)|round(2) }} MB</span>
+        <span>{{ media.uploaded_at|relative_time }}</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+      <a href="{{ url_for('serve_upload', filename=media.file_path) }}" target="_blank" class="btn btn-secondary btn-sm" style="width: 100%;">
+        View / Download
+      </a>
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 12px;">
+    <p style="color: var(--ink-500);">No gallery items match selected filters.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Upload Media Modal -->
+<div id="upload-media-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('program_gallery', id=program.id) }}">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Media to Program Gallery</h3>
+        <button type="button" class="btn-icon" onclick="closeModal('upload-media-modal')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="files">Select File(s) (Images, Videos, Documents)</label>
+          <input type="file" id="files" name="files[]" class="form-control" multiple required>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('upload-media-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Upload File(s)</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

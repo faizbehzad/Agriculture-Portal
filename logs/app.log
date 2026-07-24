@@ -1,0 +1,20 @@
+[2026-07-23T19:32:29.879066] User:1 IP:192.168.100.24 Action:User logged in Entity:user:1
+[2026-07-23T19:33:45.504817] User:1 IP:192.168.100.24 Action:Created farmer profile Entity:farmer:1
+[2026-07-23T19:34:45.278986] User:1 IP:192.168.100.24 Action:Created program scheme Entity:program:1
+[2026-07-23T19:35:33.208026] User:1 IP:192.168.100.24 Action:Enrolled farmer in program Entity:farmer_program:1
+[2026-07-23T19:35:38.269957] User:1 IP:192.168.100.24 Action:Updated farmer profile Entity:farmer:1
+[2026-07-23T19:35:52.998405] User:1 IP:192.168.100.24 Action:Deleted farmer record Entity:farmer:1
+[2026-07-23T19:36:01.590591] User:1 IP:192.168.100.24 Action:Updated program scheme Entity:program:1
+[2026-07-23T19:38:43.208865] User:1 IP:192.168.100.24 Action:Updated program scheme Entity:program:1
+[2026-07-23T19:39:07.245274] User:1 IP:192.168.100.24 Action:Uploaded media to Exclusive Gallery Entity:gallery_media:1
+[2026-07-23T19:39:19.089973] User:1 IP:192.168.100.24 Action:Deleted Exclusive Gallery media Entity:gallery_media:1
+[2026-07-23T19:39:42.947642] User:1 IP:192.168.100.24 Action:Uploaded media to Exclusive Gallery Entity:gallery_media:1
+[2026-07-23T19:39:52.301273] User:1 IP:192.168.100.24 Action:Uploaded media to Exclusive Gallery Entity:gallery_media:2
+[2026-07-23T19:40:01.558864] User:1 IP:192.168.100.24 Action:Uploaded media to Exclusive Gallery Entity:gallery_media:3
+[2026-07-23T19:41:19.138085] User:1 IP:192.168.100.24 Action:Uploaded 1 media file(s) to Exclusive Gallery Entity:exclusive_gallery:None
+[2026-07-23T19:41:36.920802] User:1 IP:192.168.100.24 Action:Uploaded 1 media file(s) to Exclusive Gallery Entity:exclusive_gallery:None
+[2026-07-23T19:41:44.453225] User:1 IP:192.168.100.24 Action:Uploaded 1 media file(s) to Exclusive Gallery Entity:exclusive_gallery:None
+[2026-07-23T19:41:54.685203] User:1 IP:192.168.100.24 Action:Uploaded 1 media file(s) to Exclusive Gallery Entity:exclusive_gallery:None
+[2026-07-23T19:42:48.934691] User:1 IP:192.168.100.24 Action:Created farmer profile Entity:farmer:1
+[2026-07-23T19:44:43.054507] User:1 IP:192.168.100.24 Action:Updated farmer profile Entity:farmer:1
+[2026-07-23T20:17:48.056480] User:1 IP:192.168.100.24 Action:User logged in Entity:user:1

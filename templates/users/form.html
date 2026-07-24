@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}{% if target_user %}Edit User — {{ target_user.full_name }}{% else %}Add New User{% endif %}{% endblock %}
+{% block page_title %}{% if target_user %}Edit User Account & Permissions{% else %}Add New System User{% endif %}{% endblock %}
+
+{% block content %}
+{% set perms = target_user.get_perms() if target_user else {} %}
+
+<form method="POST" action="{% if target_user %}{{ url_for('user_form', id=target_user.id) }}{% else %}{{ url_for('user_form') }}{% endif %}">
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="card-title">User Account Details</h3>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="full_name">Full Name *</label>
+        <input type="text" id="full_name" name="full_name" class="form-control" value="{{ target_user.full_name if target_user else '' }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address *</label>
+        <input type="email" id="email" name="email" class="form-control" value="{{ target_user.email if target_user else '' }}" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="role">Role Category</label>
+        <select id="role" name="role" class="form-control">
+          <option value="staff" {% if target_user and target_user.role == 'staff' %}selected{% endif %}>Staff Member</option>
+          <option value="admin" {% if target_user and target_user.role == 'admin' %}selected{% endif %}>Administrator</option>
+          <option value="superadmin" {% if target_user and target_user.role == 'superadmin' %}selected{% endif %}>SuperAdmin</option>
+          <option value="custom" {% if target_user and target_user.role == 'custom' %}selected{% endif %}>Custom Role</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password {% if target_user %}(Leave blank to keep current){% else %}*{% endif %}</label>
+        <input type="password" id="password" name="password" class="form-control" {% if not target_user %}required{% endif %}>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permission Matrix & Preset Templates -->
+  <div class="card mb-4">
+    <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
+      <h3 class="card-title">Access Control & Permission Matrix</h3>
+      
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--ink-500);">PRESETS:</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="applyPreset('viewer')">Viewer Preset</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="applyPreset('staff')">Staff Preset</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="applyPreset('admin')">Admin Preset</button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
+      <!-- Farmer Module Perms -->
+      <div class="card" style="background: var(--paper-50); padding: 1rem;">
+        <h4 style="font-size: 0.95rem; color: var(--forest-900); margin-bottom: 0.75rem;">Farmers Module</h4>
+        <label style="display: block; margin-bottom: 0.4rem; cursor: pointer;">
+          <input type="checkbox" id="perm_farmer_view" name="perm_farmer_view" {% if perms.get('farmer_view', 1) %}checked{% endif %}> View Farmers List & Profiles
+        </label>
+        <label style="display: block; margin-bottom: 0.4rem; cursor: pointer;">
+          <input type="checkbox" id="perm_farmer_edit" name="perm_farmer_edit" {% if perms.get('farmer_edit', 1) %}checked{% endif %}> Add & Edit Farmer Records
+        </label>
+        <label style="display: block; cursor: pointer;">
+          <input type="checkbox" id="perm_farmer_delete" name="perm_farmer_delete" {% if perms.get('farmer_delete', 0) %}checked{% endif %}> Delete Farmer Records
+        </label>
+      </div>
+
+      <!-- Program Module Perms -->
+      <div class="card" style="background: var(--paper-50); padding: 1rem;">
+        <h4 style="font-size: 0.95rem; color: var(--forest-900); margin-bottom: 0.75rem;">Programs Module</h4>
+        <label style="display: block; margin-bottom: 0.4rem; cursor: pointer;">
+          <input type="checkbox" id="perm_program_view" name="perm_program_view" {% if perms.get('program_view', 1) %}checked{% endif %}> View Programs & Gallery
+        </label>
+        <label style="display: block; margin-bottom: 0.4rem; cursor: pointer;">
+          <input type="checkbox" id="perm_program_edit" name="perm_program_edit" {% if perms.get('program_edit', 0) %}checked{% endif %}> Create & Edit Schemes
+        </label>
+        <label style="display: block; cursor: pointer;">
+          <input type="checkbox" id="perm_program_delete" name="perm_program_delete" {% if perms.get('program_delete', 0) %}checked{% endif %}> Delete Schemes
+        </label>
+      </div>
+
+      <!-- Admin & Security Perms -->
+      <div class="card" style="background: var(--paper-50); padding: 1rem;">
+        <h4 style="font-size: 0.95rem; color: var(--forest-900); margin-bottom: 0.75rem;">System & Exclusive</h4>
+        <label style="display: block; margin-bottom: 0.4rem; cursor: pointer;">
+          <input type="checkbox" id="perm_logs_access" name="perm_logs_access" {% if perms.get('logs_access', 0) %}checked{% endif %}> View System Activity Logs
+        </label>
+        <label style="display: block; margin-bottom: 0.4rem; cursor: pointer;">
+          <input type="checkbox" id="perm_user_mgmt" name="perm_user_mgmt" {% if perms.get('user_mgmt', 0) %}checked{% endif %}> Manage User Accounts
+        </label>
+        
+        <div style="margin-top: 0.75rem;">
+          <label class="form-label" for="perm_gallery_access">Exclusive Gallery Access</label>
+          <select id="perm_gallery_access" name="perm_gallery_access" class="form-control">
+            <option value="none" {% if perms.get('gallery_access') == 'none' %}selected{% endif %}>None (Restricted)</option>
+            <option value="viewer" {% if perms.get('gallery_access') == 'viewer' %}selected{% endif %}>Viewer (View & Download Only)</option>
+            <option value="super" {% if perms.get('gallery_access') == 'super' %}selected{% endif %}>Super (View, Upload & Delete)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+    <a href="{{ url_for('users_list') }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary">Save User Permissions</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyPreset(preset) {
+  const fView = document.getElementById('perm_farmer_view');
+  const fEdit = document.getElementById('perm_farmer_edit');
+  const fDel = document.getElementById('perm_farmer_delete');
+  const pView = document.getElementById('perm_program_view');
+  const pEdit = document.getElementById('perm_program_edit');
+  const pDel = document.getElementById('perm_program_delete');
+  const logs = document.getElementById('perm_logs_access');
+  const uMgmt = document.getElementById('perm_user_mgmt');
+  const gal = document.getElementById('perm_gallery_access');
+
+  if (preset === 'viewer') {
+    fView.checked = true; fEdit.checked = false; fDel.checked = false;
+    pView.checked = true; pEdit.checked = false; pDel.checked = false;
+    logs.checked = false; uMgmt.checked = false; gal.value = 'none';
+  } else if (preset === 'staff') {
+    fView.checked = true; fEdit.checked = true; fDel.checked = false;
+    pView.checked = true; pEdit.checked = false; pDel.checked = false;
+    logs.checked = false; uMgmt.checked = false; gal.value = 'none';
+  } else if (preset === 'admin') {
+    fView.checked = true; fEdit.checked = true; fDel.checked = true;
+    pView.checked = true; pEdit.checked = true; pDel.checked = true;
+    logs.checked = true; uMgmt.checked = false; gal.value = 'super';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Activity Logs{% endblock %}
+{% block page_title %}System Activity Logs{% endblock %}
+
+{% block top_actions %}
+{% if current_user.role == 'superadmin' %}
+<a href="{{ url_for('logs_export') }}" class="btn btn-secondary">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  Export CSV
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4" style="padding: 1rem 1.25rem;">
+  <form method="GET" action="{{ url_for('logs_view') }}" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <input type="text" name="employee" class="form-control" style="flex: 1; min-width: 200px;" placeholder="Search employee name..." value="{{ employee_search }}">
+    <input type="text" name="action" class="form-control" style="flex: 1; min-width: 200px;" placeholder="Filter by action..." value="{{ action_search }}">
+    <button type="submit" class="btn btn-secondary">Filter Logs</button>
+    {% if employee_search or action_search %}
+    <a href="{{ url_for('logs_view') }}" class="btn btn-icon" title="Clear filters">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="table-container">
+  <table class="table table-responsive-cards">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>User / Actor</th>
+        <th>Action</th>
+        <th>Entity</th>
+        <th>IP Address</th>
+        <th>Timestamp (PKT 12hr)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in pagination.items %}
+      <tr>
+        <td data-label="ID">#{{ log.id }}</td>
+        <td data-label="User / Actor">
+          <strong>{{ log.user.full_name if log.user else 'System / Unknown' }}</strong>
+          {% if log.user %}
+          <div style="font-size: 0.75rem; color: var(--ink-500);">{{ log.user.email }}</div>
+          {% endif %}
+        </td>
+        <td data-label="Action">
+          <span style="font-weight: 600; color: var(--forest-900);">{{ log.action }}</span>
+          {% if log.details %}
+          <div style="font-size: 0.75rem; color: var(--ink-500); font-family: monospace;">{{ log.details }}</div>
+          {% endif %}
+        </td>
+        <td data-label="Entity">
+          {% if log.entity_type %}
+          <span class="status-pill complete" style="font-size: 0.72rem;">{{ log.entity_type }} #{{ log.entity_id or '' }}</span>
+          {% else %}
+          —
+          {% endif %}
+        </td>
+        <td data-label="IP Address"><code>{{ log.ip_address }}</code></td>
+        <td data-label="Timestamp (PKT 12hr)">
+          <strong>{{ log.created_at|pkt_time }}</strong>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--ink-500); padding: 2rem;">
+          No log entries match criteria.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination Controls -->
+{% if pagination and pagination.pages > 1 %}
+<div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;">
+  {% if pagination.has_prev %}
+  <a href="{{ url_for('logs_view', page=pagination.prev_num, employee=employee_search, action=action_search) }}" class="btn btn-secondary btn-sm">Previous</a>
+  {% endif %}
+  <span style="padding: 0.4rem 0.8rem; font-size: 0.88rem; color: var(--ink-500);">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+  {% if pagination.has_next %}
+  <a href="{{ url_for('logs_view', page=pagination.next_num, employee=employee_search, action=action_search) }}" class="btn btn-secondary btn-sm">Next</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

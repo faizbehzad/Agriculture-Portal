@@ -1,0 +1,70 @@
+<div style="display: flex; gap: 1.25rem; align-items: flex-start; margin-bottom: 1.5rem;">
+  <div style="width: 80px; height: 80px; border-radius: 12px; overflow: hidden; background: var(--sage-100); border: 2px solid var(--sage-300); flex-shrink: 0;">
+    {% if farmer.photo_path %}
+    <img src="{{ url_for('serve_upload', filename=farmer.photo_path) }}" alt="{{ farmer.full_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+    {% else %}
+    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--forest-700);">
+      {{ farmer.full_name[:2].upper() }}
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="flex: 1;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h3 style="font-size: 1.25rem; color: var(--forest-900);">{{ farmer.full_name }}</h3>
+        <p style="color: var(--ink-500); font-size: 0.88rem;">Father's Name: {{ farmer.father_name }}</p>
+      </div>
+      <span class="status-pill {{ status }}">{{ status|title }}</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.88rem;">
+      <div><strong>Farmer ID:</strong> {{ farmer.farmer_id }}</div>
+      <div><strong>CNIC:</strong> {{ farmer.cnic }}</div>
+      <div><strong>Email:</strong> {{ farmer.email or 'N/A' }}</div>
+      <div><strong>Land Holding:</strong> {{ farmer.land_value or '0' }} {{ farmer.land_unit }}</div>
+    </div>
+  </div>
+</div>
+
+<h4 style="font-size: 1rem; color: var(--forest-900); margin-bottom: 0.5rem; border-bottom: 1px solid var(--sage-300); padding-bottom: 0.35rem;">
+  Phone Numbers
+</h4>
+<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+  {% for p in farmer.phones %}
+  <span style="background: var(--sage-100); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--sage-300);">
+    <strong>{{ p.provider }}:</strong> {{ p.number }} {% if p.is_primary %}(Primary){% endif %}
+  </span>
+  {% else %}
+  <span style="color: var(--ink-500); font-size: 0.85rem;">No phone numbers registered.</span>
+  {% endfor %}
+</div>
+
+<h4 style="font-size: 1rem; color: var(--forest-900); margin-bottom: 0.5rem; border-bottom: 1px solid var(--sage-300); padding-bottom: 0.35rem;">
+  Enrolled Subsidized Programs
+</h4>
+{% if farmer.enrollments %}
+  {% for en in farmer.enrollments %}
+  <div class="card mb-3" style="padding: 1rem; border-left: 4px solid {{ en.program.color_hex }};">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h5 style="color: var(--forest-900); font-size: 0.95rem;">{{ en.program.name }} ({{ en.program.year }})</h5>
+      <span style="font-size: 0.75rem; color: var(--ink-500);">Enrolled: {{ en.enrolled_at|pkt_time }}</span>
+    </div>
+
+    <div style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+      <strong>Equipment Enrolled:</strong>
+      <ul style="padding-left: 1.25rem; margin-top: 0.25rem;">
+        {% for eq in en.selected_equipment %}
+        <li>
+          Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }} | 
+          Govt Subsidy: <strong style="color: var(--forest-700);">PKR {{ "{:,.2f}".format(eq.govt_subsidy_amount) }}</strong> | 
+          Farmer Share: <strong style="color: var(--leaf-600);">PKR {{ "{:,.2f}".format(eq.farmer_price) }}</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <p style="color: var(--ink-500); font-size: 0.88rem;">No active program enrollments.</p>
+{% endif %}

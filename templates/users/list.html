@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management (SuperAdmin Only){% endblock %}
+
+{% block top_actions %}
+<a href="{{ url_for('user_form') }}" class="btn btn-primary">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Add New User
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="table-container">
+  <table class="table table-responsive-cards">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Last Login</th>
+        <th style="text-align: right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td data-label="Name">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="user-avatar" style="width: 34px; height: 34px; font-size: 0.82rem;">{{ u.full_name[:2].upper() }}</div>
+            <strong>{{ u.full_name }}</strong>
+          </div>
+        </td>
+        <td data-label="Email">{{ u.email }}</td>
+        <td data-label="Role">
+          <span class="status-pill complete" style="text-transform: uppercase; font-size: 0.75rem;">{{ u.role }}</span>
+        </td>
+        <td data-label="Status">
+          {% if u.is_active %}
+          <span class="status-pill complete">Active</span>
+          {% else %}
+          <span class="status-pill expired">Inactive</span>
+          {% endif %}
+        </td>
+        <td data-label="Created">{{ u.created_at|pkt_time }}</td>
+        <td data-label="Last Login">{{ u.last_login|relative_time if u.last_login else 'Never' }}</td>
+        <td data-label="Actions" style="text-align: right;">
+          {% if not (u.email in ['umar@atechabad.com', 'naem@atechabad.com'] and current_user.role != 'superadmin') %}
+          <a href="{{ url_for('user_form', id=u.id) }}" class="btn-icon" title="Edit Permissions">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </a>
+          {% endif %}
+
+          {% if u.email not in ['umar@atechabad.com', 'naem@atechabad.com'] %}
+          <form method="POST" action="{{ url_for('user_delete', id=u.id) }}" onsubmit="return confirm('Delete this user account?');" style="display: inline;">
+            <button type="submit" class="btn-icon text-danger" title="Delete">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

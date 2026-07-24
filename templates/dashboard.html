@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Overview{% endblock %}
+{% block page_title %}Dashboard Analytics{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* HERO BANNER */
+.dashboard-hero {
+  background: linear-gradient(135deg, #061A11 0%, #0D2D1F 50%, #12402C 100%);
+  border-radius: var(--radius-lg);
+  padding: 2rem 2.25rem;
+  color: #FFFFFF;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 30px -10px rgba(6, 26, 17, 0.4);
+}
+
+.dashboard-hero::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+  pointer-events: none;
+}
+
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.hero-greeting h2 {
+  color: #FFFFFF;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.hero-greeting p {
+  color: var(--emerald-400);
+  font-size: 0.92rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--emerald-400);
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  animation: pulsePing 2s infinite;
+}
+
+@keyframes pulsePing {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+/* STAT CARDS */
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  padding: 1.35rem 1.5rem;
+  border: 1px solid #E2E8F0;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-bounce);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--emerald-400);
+}
+
+.stat-card-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: var(--emerald-50);
+  color: var(--emerald-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.stat-card-val {
+  font-family: var(--font-heading);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--ink-900);
+  line-height: 1;
+  margin-bottom: 0.35rem;
+}
+
+.stat-card-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* CHARTS SECTION */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 900px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid #E2E8F0;
+  box-shadow: var(--shadow-sm);
+}
+
+.session-resume-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: #F8FAFC;
+  border-radius: var(--radius-md);
+  border: 1px solid #E2E8F0;
+  margin-bottom: 0.75rem;
+  transition: all var(--transition-fast);
+}
+
+.session-resume-item:hover {
+  background: #FFFFFF;
+  border-color: var(--emerald-500);
+  box-shadow: var(--shadow-sm);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- HERO WELCOME BANNER -->
+<div class="dashboard-hero">
+  <div class="hero-top">
+    <div class="hero-greeting">
+      <h2>Welcome back, {{ current_user.full_name.split()[0] }} 👋</h2>
+      <p>Agricultural Engineering Services — Management & Subsidy Oversight</p>
+    </div>
+
+    <div class="live-badge">
+      <div class="pulse-dot"></div>
+      <span>PKT System Time: <strong id="live-pkt-clock">Loading...</strong></span>
+    </div>
+  </div>
+
+  <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    {% if current_user.has_perm('farmer_edit') %}
+    <a href="{{ url_for('farmer_form') }}" class="btn btn-primary btn-sm">
+      + Register New Farmer
+    </a>
+    {% endif %}
+    {% if current_user.has_perm('program_edit') %}
+    <a href="{{ url_for('program_form') }}" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25);">
+      + Create Program Scheme
+    </a>
+    {% endif %}
+    {% if current_user.has_perm('gallery_access') and current_user.has_perm('gallery_access') != 'none' %}
+    <a href="{{ url_for('exclusive_gallery') }}" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25);">
+      📁 Media Drive
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- STAT CARDS GRID -->
+<div class="stat-card-grid">
+  <!-- Active Schemes -->
+  <div class="stat-card">
+    <div class="stat-card-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div class="stat-card-val">{{ total_programs }}</div>
+    <div class="stat-card-label">Active Schemes</div>
+  </div>
+
+  <!-- Enrolled Farmers -->
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background: #EFF6FF; color: #3B82F6;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="stat-card-val">{{ total_farmers }}</div>
+    <div class="stat-card-label">Enrolled Farmers</div>
+  </div>
+
+  <!-- Total Equipment Items -->
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background: #F5F3FF; color: #8B5CF6;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    </div>
+    <div class="stat-card-val">{{ total_equipment }}</div>
+    <div class="stat-card-label">Equipment Distributed</div>
+  </div>
+
+  <!-- Total Subsidy Disbursed -->
+  <div class="stat-card" style="border-left: 5px solid var(--emerald-500);">
+    <div class="stat-card-icon" style="background: var(--emerald-50); color: var(--emerald-600);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="stat-card-val" style="color: var(--emerald-600);">PKR {{ "{:,.0f}".format(total_subsidy) }}</div>
+    <div class="stat-card-label">Subsidy Disbursed</div>
+  </div>
+</div>
+
+<!-- CHARTS SECTION -->
+<div class="charts-grid">
+  <!-- Line / Bar Chart -->
+  <div class="chart-card">
+    <div class="card-header">
+      <h3 class="card-title">Enrollment & Subsidy Distribution Overview</h3>
+      <span class="status-pill complete">Live Overview</span>
+    </div>
+    <div style="height: 280px; position: relative;">
+      <canvas id="subsidyOverviewChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Donut Breakdown Chart -->
+  <div class="chart-card">
+    <div class="card-header">
+      <h3 class="card-title">Equipment Schemes</h3>
+    </div>
+    <div style="height: 280px; position: relative; display: flex; align-items: center; justify-content: center;">
+      <canvas id="equipmentDonutChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- CONTINUE WHERE YOU LEFT OFF -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Continue Where You Left Off</h3>
+      <p style="font-size: 0.82rem; color: var(--ink-500); margin-top: 0.15rem;">
+        {% if current_user.role == 'superadmin' or current_user.email == 'naem@atechabad.com' %}
+        Viewing recent session activity across all staff members
+        {% else %}
+        Your recent session history and work items
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  {% if recent_sessions %}
+    {% for sess in recent_sessions %}
+    <div class="session-resume-item">
+      <div>
+        <div style="font-weight: 700; color: var(--ink-900); font-size: 0.95rem;">
+          {{ sess.page|replace('_', ' ')|title }}
+          {% if sess.entity_id %} <span style="font-size: 0.8rem; color: var(--emerald-600); font-weight: 600;">#{{ sess.entity_id }}</span>{% endif %}
+        </div>
+        <div style="font-size: 0.78rem; color: var(--ink-500); margin-top: 0.15rem;">
+          By <strong>{{ sess.user.full_name }}</strong> • Updated {{ sess.updated_at|relative_time }}
+        </div>
+      </div>
+
+      <div>
+        {% if sess.page == 'farmer_form' and sess.entity_id %}
+        <a href="{{ url_for('farmer_form', id=sess.entity_id) }}" class="btn btn-secondary btn-sm">Resume Edit</a>
+        {% elif sess.page == 'program_gallery' and sess.entity_id %}
+        <a href="{{ url_for('program_gallery', id=sess.entity_id) }}" class="btn btn-secondary btn-sm">Resume Gallery</a>
+        {% elif sess.page == 'farmers_list' %}
+        <a href="{{ url_for('farmers_list') }}" class="btn btn-secondary btn-sm">Resume List</a>
+        {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">Resume View</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div style="text-align: center; padding: 2rem; color: var(--ink-500);">
+    No recent activity sessions logged yet. Start working with farmers or programs to track progress here!
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// LIVE PKT CLOCK WIDGET
+function updateLiveClock() {
+  const options = { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+  const formatter = new Intl.DateTimeFormat([], options);
+  document.getElementById('live-pkt-clock').innerText = formatter.format(new Date());
+}
+setInterval(updateLiveClock, 1000);
+updateLiveClock();
+
+// CHARTS INITIALIZATION
+document.addEventListener('DOMContentLoaded', () => {
+  // Chart 1: Subsidy Distribution Bar/Line
+  const ctx1 = document.getElementById('subsidyOverviewChart').getContext('2d');
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+      datasets: [
+        {
+          label: 'Farmers Registered',
+          data: [12, 19, 28, 35, 42, 58, {{ total_farmers if total_farmers > 0 else 5 }}],
+          backgroundColor: 'rgba(16, 185, 129, 0.85)',
+          borderRadius: 6
+        },
+        {
+          label: 'Equipment Disbursed',
+          data: [8, 14, 22, 29, 36, 45, {{ total_equipment if total_equipment > 0 else 4 }}],
+          backgroundColor: 'rgba(59, 130, 246, 0.85)',
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { borderDash: [4, 4] } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Chart 2: Equipment Donut
+  const ctx2 = document.getElementById('equipmentDonutChart').getContext('2d');
+  new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['Laser Levelers', 'Greenhouse Kits', 'Solar Pumps', 'Tractors'],
+      datasets: [{
+        data: [40, 25, 20, 15],
+        backgroundColor: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      cutout: '70%'
+    }
+  });
+});
+</script>
+{% endblock %}
