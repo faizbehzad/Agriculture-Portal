@@ -132,73 +132,287 @@
     </div>
   </div>
 
+  <!-- Permanent Address (Optional) -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="card-title">3. Permanent Address</h3>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="house_address">House / Street Address</label>
+        <input type="text" id="house_address" name="house_address" class="form-control" value="{{ farmer.house_address if farmer else '' }}" placeholder="House #12, Street 5, Model Town">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="city_tehsil">City / Tehsil</label>
+        <input type="text" id="city_tehsil" name="city_tehsil" class="form-control" value="{{ farmer.city_tehsil if farmer else '' }}" placeholder="Gujranwala">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="district">District</label>
+        <input type="text" id="district" name="district" class="form-control" value="{{ farmer.district if farmer else '' }}" placeholder="Gujranwala">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="province">Province</label>
+        <select id="province" name="province" class="form-control">
+          <option value="">-- Select Province --</option>
+          <option value="Punjab" {% if farmer and farmer.province == 'Punjab' %}selected{% endif %}>Punjab</option>
+          <option value="Sindh" {% if farmer and farmer.province == 'Sindh' %}selected{% endif %}>Sindh</option>
+          <option value="KPK" {% if farmer and farmer.province == 'KPK' %}selected{% endif %}>KPK</option>
+          <option value="Balochistan" {% if farmer and farmer.province == 'Balochistan' %}selected{% endif %}>Balochistan</option>
+          <option value="Gilgit-Baltistan" {% if farmer and farmer.province == 'Gilgit-Baltistan' %}selected{% endif %}>Gilgit-Baltistan</option>
+          <option value="Azad Kashmir" {% if farmer and farmer.province == 'Azad Kashmir' %}selected{% endif %}>Azad Kashmir</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Land Documents Repeater (Optional) -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="card-title">4. Land Documents</h3>
+      <button type="button" id="add-document-btn" class="btn btn-secondary btn-sm">
+        + Add Document
+      </button>
+    </div>
+
+    <div id="document-repeater-container">
+      {% if farmer and farmer.land_documents %}
+        {% for d in farmer.land_documents %}
+        <div class="form-row document-row mb-2">
+          <div class="form-group" style="flex: 1;">
+            <select name="doc_type[]" class="form-control">
+              <option value="Registry" {% if d.doc_type == 'Registry' %}selected{% endif %}>Registry</option>
+              <option value="Fard" {% if d.doc_type == 'Fard' %}selected{% endif %}>Fard</option>
+              <option value="Mutation" {% if d.doc_type == 'Mutation' %}selected{% endif %}>Mutation</option>
+              <option value="Lease Agreement" {% if d.doc_type == 'Lease Agreement' %}selected{% endif %}>Lease Agreement</option>
+              <option value="Other" {% if d.doc_type == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <input type="file" name="doc_file[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+            {% if d.file_path %}
+            <small style="color: var(--leaf-600); font-size: 0.75rem;">
+              Current: <a href="{{ url_for('serve_upload', filename=d.file_path) }}" target="_blank">View File</a>
+            </small>
+            {% endif %}
+          </div>
+          <div class="form-group" style="width: auto; display: flex; align-items: center;">
+            <button type="button" class="btn btn-icon text-danger remove-document-btn" title="Remove">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="form-row document-row mb-2">
+          <div class="form-group" style="flex: 1;">
+            <select name="doc_type[]" class="form-control">
+              <option value="Registry">Registry</option>
+              <option value="Fard">Fard</option>
+              <option value="Mutation">Mutation</option>
+              <option value="Lease Agreement">Lease Agreement</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <input type="file" name="doc_file[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+          </div>
+          <div class="form-group" style="width: auto; display: flex; align-items: center;">
+            <button type="button" class="btn btn-icon text-danger remove-document-btn" title="Remove">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Section 5: Farmer's Own Tractor Details (Optional) -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="card-title">5. Farmer's Own Tractor Details (Optional)</h3>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="tractor_make">Tractor Make/Brand</label>
+        <input type="text" id="tractor_make" name="tractor_make" class="form-control" value="{{ farmer.tractor_make if farmer and farmer.tractor_make else '' }}" placeholder="Massey Ferguson">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tractor_model_year">Model / Year</label>
+        <input type="text" id="tractor_model_year" name="tractor_model_year" class="form-control" value="{{ farmer.tractor_model_year if farmer and farmer.tractor_model_year else '' }}" placeholder="375 - 2019">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="tractor_chassis_number">Chassis / Engine Number</label>
+        <input type="text" id="tractor_chassis_number" name="tractor_chassis_number" class="form-control" value="{{ farmer.tractor_chassis_number if farmer and farmer.tractor_chassis_number else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tractor_reg_number">Registration Number</label>
+        <input type="text" id="tractor_reg_number" name="tractor_reg_number" class="form-control" value="{{ farmer.tractor_reg_number if farmer and farmer.tractor_reg_number else '' }}" placeholder="LEA-1234">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="tractor_reg_city">Registration City/District</label>
+        <input type="text" id="tractor_reg_city" name="tractor_reg_city" class="form-control" value="{{ farmer.tractor_reg_city if farmer and farmer.tractor_reg_city else '' }}">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="tractor_reg_copy">Tractor Registration Copy</label>
+        <input type="file" id="tractor_reg_copy" name="tractor_reg_copy" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+        {% if farmer and farmer.tractor_reg_copy_path %}
+        <small style="color: var(--leaf-600); font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+          Current file: <a href="{{ url_for('serve_upload', filename=farmer.tractor_reg_copy_path) }}" target="_blank">View File</a>
+        </small>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tractor_photo">Tractor Photo</label>
+        <input type="file" id="tractor_photo" name="tractor_photo" class="form-control" accept="image/*">
+        {% if farmer and farmer.tractor_photo_path %}
+        <small style="color: var(--leaf-600); font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+          Current file: <a href="{{ url_for('serve_upload', filename=farmer.tractor_photo_path) }}" target="_blank">View File</a>
+        </small>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: Subsidized Program Enrollments -->
+  <div class="card mb-4">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 class="card-title">6. Subsidized Program Enrollments {% if not farmer %}(Optional){% endif %}</h3>
+      {% if farmer %}
+      <button type="button" class="btn btn-primary btn-sm" onclick="openModal('enroll-program-modal')">
+        + Enroll in Program
+      </button>
+      {% endif %}
+    </div>
+
+    {% if farmer %}
+      {% if farmer.enrollments %}
+        {% for en in farmer.enrollments %}
+        <div class="card mb-3" style="border-left: 6px solid {{ en.program.color_hex }};">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 1.1rem; color: var(--forest-900);">{{ en.program.name }} ({{ en.program.year }})</h4>
+            <span style="font-size: 0.8rem; color: var(--ink-500);">Enrolled: {{ en.enrolled_at|pkt_time }}</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.88rem; margin-bottom: 1rem;">
+            <div>
+              <strong>Equipment Selected:</strong>
+              <ul>
+                {% for eq in en.selected_equipment %}
+                <li>Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }} | Govt: <strong>PKR {{ "{:,.2f}".format(eq.govt_subsidy_amount) }}</strong></li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div>
+              <strong>Photo Verifications:</strong>
+              <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.25rem;">
+                <span>Group Photo: {% if en.group_photo %}✅{% else %}❌ Missing{% endif %}</span>
+                <span>Farmer+Equipment: {% if en.farmer_with_equipment_photo %}✅{% else %}❌ Missing{% endif %}</span>
+                <span>QR Tracker: {% if en.qr_tracker_photo %}✅{% else %}❌ Missing{% endif %}</span>
+                <span>Govt Plate: {% if en.govt_plate_photo %}✅{% else %}❌ Missing{% endif %}</span>
+                <span>CNIC Front: {% if en.cnic_front_photo %}✅{% else %}❌ Missing{% endif %}</span>
+                <span>CNIC Back: {% if en.cnic_back_photo %}✅{% else %}❌ Missing{% endif %}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="color: var(--ink-500); text-align: center; padding: 1.5rem;">No programs enrolled yet for this farmer.</p>
+      {% endif %}
+
+      <!-- Total Subsidies / Amount Paid Footer -->
+      <div style="background: var(--sage-100); padding: 1.25rem; border-radius: 8px; margin-top: 1rem; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700;">Total Subsidies Received to Date</div>
+          <div style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--forest-700);">
+            PKR {{ "{:,.2f}".format(total_subsidy_received) }}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700;">Total Amount Paid to Date</div>
+          <div style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--leaf-600);">
+            PKR {{ "{:,.2f}".format(total_amount_paid) }}
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div style="padding: 1.25rem;">
+        <div class="form-group mb-3">
+          <label class="form-label" for="enroll_program_id">Select Subsidy Program</label>
+          <select id="enroll_program_id" name="enroll_program_id" class="form-control" onchange="loadNewFarmerEquipment(this.value)">
+            <option value="">-- No Enrollment / Select Program Scheme --</option>
+            {% for prog in programs %}
+            <option value="{{ prog.id }}">{{ prog.name }} ({{ prog.year }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="new-farmer-equipment-select-container" class="form-group mb-3" style="display: none;">
+          <label class="form-label" style="font-weight: 700;">Select Subsidized Equipment Items</label>
+          <div id="new-farmer-equipment-checkboxes" style="font-size: 0.88rem; color: var(--ink-700); margin-bottom: 1.25rem;"></div>
+
+          <h4 style="font-size: 0.95rem; color: var(--forest-900); margin-bottom: 0.75rem; margin-top: 1.25rem; font-weight: 700; border-top: 1px dashed #CBD5E1; padding-top: 1rem;">Verification Photographs (Optional)</h4>
+
+          <div class="form-group mb-2">
+            <label class="form-label">Group Photo</label>
+            <input type="file" name="group_photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Farmer with Equipment Photo</label>
+            <input type="file" name="farmer_with_equipment_photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">QR Tracker Photo</label>
+            <input type="file" name="qr_tracker_photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Imposed ID Photo</label>
+            <input type="file" name="imposed_id_photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Govt Verified Plate Photo</label>
+            <input type="file" name="govt_plate_photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">CNIC Front Photo</label>
+            <input type="file" name="cnic_front_photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">CNIC Back Photo</label>
+            <input type="file" name="cnic_back_photo" class="form-control" accept="image/*">
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
   <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: 2rem;">
     <a href="{{ url_for('farmers_list') }}" class="btn btn-secondary">Cancel</a>
     <button type="submit" class="btn btn-primary">Save Farmer Details</button>
   </div>
 </form>
 
-<!-- Enrolled Programs Section (If editing existing farmer) -->
 {% if farmer %}
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="card-title">3. Subsidized Program Enrollments</h3>
-    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('enroll-program-modal')">
-      + Enroll in Program
-    </button>
-  </div>
-
-  {% if farmer.enrollments %}
-    {% for en in farmer.enrollments %}
-    <div class="card mb-3" style="border-left: 6px solid {{ en.program.color_hex }};">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-        <h4 style="font-size: 1.1rem; color: var(--forest-900);">{{ en.program.name }} ({{ en.program.year }})</h4>
-        <span style="font-size: 0.8rem; color: var(--ink-500);">Enrolled: {{ en.enrolled_at|pkt_time }}</span>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.88rem; margin-bottom: 1rem;">
-        <div>
-          <strong>Equipment Selected:</strong>
-          <ul>
-            {% for eq in en.selected_equipment %}
-            <li>Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }} | Govt: <strong>PKR {{ "{:,.2f}".format(eq.govt_subsidy_amount) }}</strong></li>
-            {% endfor %}
-          </ul>
-        </div>
-        <div>
-          <strong>Photo Verifications:</strong>
-          <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.25rem;">
-            <span>Group Photo: {% if en.group_photo %}✅{% else %}❌ Missing{% endif %}</span>
-            <span>Farmer+Equipment: {% if en.farmer_with_equipment_photo %}✅{% else %}❌ Missing{% endif %}</span>
-            <span>QR Tracker: {% if en.qr_tracker_photo %}✅{% else %}❌ Missing{% endif %}</span>
-            <span>Govt Plate: {% if en.govt_plate_photo %}✅{% else %}❌ Missing{% endif %}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  {% else %}
-    <p style="color: var(--ink-500); text-align: center; padding: 1.5rem;">No programs enrolled yet for this farmer.</p>
-  {% endif %}
-
-  <!-- Total Subsidies / Amount Paid Footer -->
-  <div style="background: var(--sage-100); padding: 1.25rem; border-radius: 8px; margin-top: 1rem; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
-    <div>
-      <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700;">Total Subsidies Received to Date</div>
-      <div style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--forest-700);">
-        PKR {{ "{:,.2f}".format(total_subsidy_received) }}
-      </div>
-    </div>
-
-    <div>
-      <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700;">Total Amount Paid to Date</div>
-      <div style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--leaf-600);">
-        PKR {{ "{:,.2f}".format(total_amount_paid) }}
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Enroll Program Modal -->
 <div id="enroll-program-modal" class="modal-backdrop">
   <div class="modal-dialog">
@@ -229,7 +443,7 @@
         </div>
 
         <h4 style="font-size: 0.95rem; color: var(--forest-900); margin-bottom: 0.75rem; margin-top: 1rem;">Verification Photographs (Optional / Pending drive)</h4>
-        
+
         <div class="form-group">
           <label class="form-label">Group Photo</label>
           <input type="file" name="group_photo" class="form-control" accept="image/*">
@@ -250,6 +464,14 @@
           <label class="form-label">Govt Verified Plate Photo</label>
           <input type="file" name="govt_plate_photo" class="form-control" accept="image/*">
         </div>
+        <div class="form-group">
+          <label class="form-label">CNIC Front Photo</label>
+          <input type="file" name="cnic_front_photo" class="form-control" accept="image/*">
+        </div>
+        <div class="form-group">
+          <label class="form-label">CNIC Back Photo</label>
+          <input type="file" name="cnic_back_photo" class="form-control" accept="image/*">
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -264,11 +486,44 @@
 
 {% block extra_js %}
 <script>
+function loadNewFarmerEquipment(progId) {
+  const container = document.getElementById('new-farmer-equipment-select-container');
+  const checkboxes = document.getElementById('new-farmer-equipment-checkboxes');
+  if (!container || !checkboxes) return;
+  
+  if (!progId) {
+    container.style.display = 'none';
+    checkboxes.innerHTML = '';
+    return;
+  }
+
+  {% for prog in programs %}
+    if ("{{ prog.id }}" === progId) {
+      let html = '';
+      {% for eq in prog.equipment %}
+        html += `
+          <div class="card mb-2" style="padding: 0.75rem; background: var(--bg-app);">
+            <label style="display:flex; align-items:center; gap:0.75rem; cursor:pointer;">
+              <input type="checkbox" name="enroll_equipment_ids[]" value="{{ eq.id }}">
+              <div>
+                <strong>{{ eq.name }}</strong> — Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }} (Govt: {{ eq.subsidy_pct }}% Subsidy)
+              </div>
+            </label>
+          </div>
+        `;
+      {% endfor %}
+      if (!html) html = '<p style="color:var(--ink-500); font-style:italic;">No equipment defined in this program yet.</p>';
+      checkboxes.innerHTML = html;
+      container.style.display = 'block';
+    }
+  {% endfor %}
+}
+
 function loadProgramEquipment(progId) {
   if (!progId) return;
   const container = document.getElementById('equipment-checkboxes');
   container.innerHTML = 'Loading available equipment...';
-  
+
   // Render program equipment options
   {% for prog in programs %}
     if ("{{ prog.id }}" === progId) {
@@ -279,7 +534,7 @@ function loadProgramEquipment(progId) {
             <label style="display:flex; align-items:center; gap:0.75rem; cursor:pointer;">
               <input type="checkbox" name="equipment_ids[]" value="{{ eq.id }}">
               <div>
-                <strong>{{ eq.name }}</strong> — Actual: PKR {{ eq.actual_price }} (Govt: 60% | Farmer: 40%)
+                <strong>{{ eq.name }}</strong> — Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }} (Govt: 60% | Farmer: 40%)
               </div>
             </label>
           </div>
@@ -290,5 +545,8 @@ function loadProgramEquipment(progId) {
     }
   {% endfor %}
 }
+
 </script>
+<!-- Land Document repeater logic now lives in app.js as initDocumentRepeater(), loaded globally -->
+
 {% endblock %}

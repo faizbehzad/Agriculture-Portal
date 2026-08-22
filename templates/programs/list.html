@@ -24,18 +24,22 @@
   </form>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+<div class="program-grid">
   {% for prog in programs %}
-  <div class="card program-card" style="border-left-color: {{ prog.color_hex }} !important; display: flex; flex-direction: column; justify-content: space-between;">
-    <div>
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-        <div>
-          <span style="font-size: 0.75rem; font-weight: 700; color: {{ prog.color_hex }}; text-transform: uppercase; letter-spacing: 0.5px;">
-            Year {{ prog.year }}
-          </span>
-          <h3 style="font-size: 1.2rem; color: var(--forest-900); margin-top: 0.15rem;">{{ prog.name }}</h3>
+  <div class="card program-card" style="--program-accent: {{ prog.color_hex }};">
+
+    <!-- Thumbnail / Placeholder -->
+    <div class="program-card-thumb">
+      {% if prog.thumbnail_path %}
+        <img src="{{ url_for('serve_upload', filename=prog.thumbnail_path) }}" alt="{{ prog.name }} thumbnail">
+      {% else %}
+        <div class="program-card-thumb-placeholder" style="background: linear-gradient(135deg, {{ prog.color_hex }}, {{ prog.color_hex }}CC);">
+          <span class="program-card-placeholder-title">{{ prog.name }}</span>
         </div>
-        
+      {% endif %}
+
+      <div class="program-card-badges">
+        <span class="status-pill program-year-pill" style="color: {{ prog.color_hex }};">Year {{ prog.year }}</span>
         {% if prog.has_expiry %}
           {% if prog.expires_at and prog.expires_at < datetime.utcnow() %}
           <span class="status-pill expired">Expired</span>
@@ -46,11 +50,28 @@
         <span class="status-pill complete">No Expiry</span>
         {% endif %}
       </div>
+    </div>
+
+    <div class="program-card-body">
+      <h3 class="program-card-title">{{ prog.name }}</h3>
 
       <div style="margin-bottom: 1.25rem;">
-        <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--ink-500); margin-bottom: 0.35rem;">
-          Equipment Scheme ({{ prog.equipment|length }} Items)
-        </h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+          <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--ink-500); margin: 0;">
+            Equipment Scheme ({{ prog.equipment|length }} Items)
+          </h4>
+          {% if prog.enrollments|length > 0 %}
+          <span class="status-pill" style="background: var(--emerald-50); color: var(--emerald-700); font-weight: 700; border: 1px solid var(--emerald-100);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 3px; vertical-align: -1px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            {{ prog.enrollments|length }} Farmer{% if prog.enrollments|length != 1 %}s{% endif %}
+          </span>
+          {% else %}
+          <span style="font-size: 0.75rem; color: var(--ink-500); font-style: italic;">
+            No farmers enrolled yet
+          </span>
+          {% endif %}
+        </div>
+
         <ul style="font-size: 0.88rem; padding-left: 1.25rem; color: var(--ink-900);">
           {% for eq in prog.equipment[:3] %}
           <li>
@@ -64,19 +85,24 @@
           {% endif %}
         </ul>
       </div>
-    </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--sage-100);">
-      <a href="{{ url_for('program_gallery', id=prog.id) }}" class="btn btn-secondary btn-sm">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Gallery
-      </a>
+      <div class="program-card-actions">
+        <a href="{{ url_for('program_detail', id=prog.id) }}" class="btn btn-secondary btn-sm" title="View Enrolled Farmers & Details">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          View Details
+        </a>
 
-      {% if current_user.has_perm('program_edit') %}
-      <a href="{{ url_for('program_form', id=prog.id) }}" class="btn btn-primary btn-sm">
-        Edit Scheme
-      </a>
-      {% endif %}
+        <a href="{{ url_for('program_gallery', id=prog.id) }}" class="btn btn-secondary btn-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Gallery
+        </a>
+
+        {% if current_user.has_perm('program_edit') %}
+        <a href="{{ url_for('program_form', id=prog.id) }}" class="btn btn-primary btn-sm">
+          Edit Scheme
+        </a>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% else %}

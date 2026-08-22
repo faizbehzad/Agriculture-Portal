@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% block title %}Program Details — {{ program.name }}{% endblock %}
+{% block page_title %}Program Details{% endblock %}
+
+{% block top_actions %}
+<div style="display: flex; gap: 0.75rem; align-items: center;">
+  <a href="{{ url_for('programs_list') }}" class="btn btn-secondary">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to Programs
+  </a>
+  {% if current_user.has_perm('program_edit') %}
+  <a href="{{ url_for('program_form', id=program.id) }}" class="btn btn-primary">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Edit Program
+  </a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav style="margin-bottom: 1.25rem; font-size: 0.88rem; color: var(--ink-500);">
+  <a href="{{ url_for('programs_list') }}" style="color: var(--emerald-600); text-decoration: none; font-weight: 500;">Programs</a>
+  <span style="margin: 0 0.5rem;">/</span>
+  <span style="color: var(--ink-900); font-weight: 600;">{{ program.name }}</span>
+</nav>
+
+<!-- Program Header Section -->
+<div class="card mb-4" style="padding: 1.5rem; border-top: 5px solid {{ program.color_hex }};">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
+    <div style="display: flex; gap: 1.25rem; align-items: center;">
+      {% if program.thumbnail_path %}
+      <img src="{{ url_for('serve_upload', filename=program.thumbnail_path) }}" alt="{{ program.name }}" style="width: 100px; height: 75px; object-fit: cover; border-radius: var(--radius-md); border: 1.5px solid #CBD5E1; flex-shrink: 0;">
+      {% else %}
+      <div style="width: 100px; height: 75px; border-radius: var(--radius-md); background: linear-gradient(135deg, {{ program.color_hex }}, {{ program.color_hex }}CC); display: flex; align-items: center; justify-content: center; color: white; font-family: var(--font-heading); font-weight: 800; font-size: 1.5rem; flex-shrink: 0;">
+        {{ program.name[:2]|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+          <h2 style="font-size: 1.5rem; font-family: var(--font-heading); color: var(--ink-900); font-weight: 800; margin: 0;">{{ program.name }}</h2>
+          <span class="status-pill" style="color: {{ program.color_hex }}; background: var(--ink-100); font-weight: 700;">Year {{ program.year }}</span>
+          {% if program.has_expiry %}
+            {% if program.expires_at and program.expires_at < datetime.utcnow() %}
+            <span class="status-pill expired">Expired</span>
+            {% else %}
+            <span class="status-pill complete">Active</span>
+            {% endif %}
+          {% else %}
+          <span class="status-pill complete">No Expiry</span>
+          {% endif %}
+        </div>
+        <p style="color: var(--ink-500); font-size: 0.88rem; margin: 0;">
+          Equipment Scheme: <strong>{{ program.equipment|length }} Equipment Item{% if program.equipment|length != 1 %}s{% endif %}</strong>
+        </p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('program_gallery', id=program.id) }}" class="btn btn-secondary btn-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Media Gallery
+      </a>
+    </div>
+  </div>
+
+  <!-- Key Statistics Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem; border-top: 1px solid var(--ink-100); padding-top: 1.25rem;">
+    <div style="background: var(--bg-app); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #E2E8F0;">
+      <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700; margin-bottom: 0.25rem;">Total Enrolled Farmers</div>
+      <div style="font-size: 1.5rem; font-family: var(--font-heading); font-weight: 800; color: var(--emerald-700);">{{ total_farmers }}</div>
+    </div>
+
+    <div style="background: var(--bg-app); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #E2E8F0;">
+      <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700; margin-bottom: 0.25rem;">Govt Subsidy Disbursed</div>
+      <div style="font-size: 1.35rem; font-family: var(--font-heading); font-weight: 800; color: var(--emerald-600);">PKR {{ "{:,.2f}".format(total_subsidy_disbursed) }}</div>
+    </div>
+
+    <div style="background: var(--bg-app); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid #E2E8F0;">
+      <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--ink-500); font-weight: 700; margin-bottom: 0.25rem;">Farmer Contribution</div>
+      <div style="font-size: 1.35rem; font-family: var(--font-heading); font-weight: 800; color: var(--ink-900);">PKR {{ "{:,.2f}".format(total_farmer_contribution) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Enrolled Farmers List -->
+<div class="card">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+    <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Enrolled Farmers Directory ({{ total_farmers }})
+    </h3>
+  </div>
+
+  {% if program.enrollments %}
+  
+  <!-- Desktop Table View -->
+  <div class="program-detail-table-wrap" style="overflow-x: auto;">
+    <table class="table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: var(--ink-100); text-align: left; font-size: 0.8rem; text-transform: uppercase; color: var(--ink-500);">
+          <th style="padding: 0.85rem 1rem;">Farmer Details</th>
+          <th style="padding: 0.85rem 1rem;">CNIC / ID</th>
+          <th style="padding: 0.85rem 1rem;">Enrolled Date</th>
+          <th style="padding: 0.85rem 1rem;">Selected Equipment & Split</th>
+          <th style="padding: 0.85rem 1rem;">Photo Verifications</th>
+          <th style="padding: 0.85rem 1rem;">Status</th>
+          <th style="padding: 0.85rem 1rem; text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for en in program.enrollments %}
+        {% set farmer = en.farmer %}
+        {% set is_complete = en.group_photo and en.farmer_with_equipment_photo and en.qr_tracker_photo and en.imposed_id_photo and en.govt_plate_photo and en.cnic_front_photo and en.cnic_back_photo %}
+        <tr style="border-bottom: 1px solid #E2E8F0; font-size: 0.88rem;">
+          
+          <!-- Farmer Name & Photo -->
+          <td style="padding: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; overflow: hidden; background: var(--emerald-50); border: 1.5px solid var(--emerald-100); flex-shrink: 0;">
+                {% if farmer.photo_path %}
+                <img src="{{ url_for('serve_upload', filename=farmer.photo_path) }}" alt="{{ farmer.full_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--emerald-700); font-size: 0.95rem;">
+                  {{ farmer.full_name[:2]|upper }}
+                </div>
+                {% endif %}
+              </div>
+              <div>
+                <a href="{{ url_for('farmer_view', farmer_id=farmer.id) }}" style="color: var(--emerald-600); text-decoration: none; font-weight: 700;">
+                  <strong style="color: var(--emerald-600); display: block; font-size: 0.95rem;">{{ farmer.full_name }}</strong>
+                </a>
+                <span style="color: var(--ink-500); font-size: 0.8rem;">Father: {{ farmer.father_name }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- CNIC / ID -->
+          <td style="padding: 1rem;">
+            <div style="font-weight: 600; color: var(--ink-900);">{{ farmer.cnic }}</div>
+            <div style="font-size: 0.78rem; color: var(--ink-500);">ID: {{ farmer.farmer_id }}</div>
+          </td>
+
+          <!-- Enrolled Date -->
+          <td style="padding: 1rem; color: var(--ink-700); white-space: nowrap;">
+            {{ en.enrolled_at|pkt_time }}
+          </td>
+
+          <!-- Equipment & Split -->
+          <td style="padding: 1rem;">
+            {% if en.selected_equipment %}
+              <ul style="padding-left: 1.1rem; margin: 0; font-size: 0.82rem;">
+              {% for eq in en.selected_equipment %}
+                <li style="margin-bottom: 0.35rem;">
+                  <strong style="color: var(--ink-900);">Equipment #{{ eq.equipment_id }}</strong><br>
+                  <span style="color: var(--ink-500);">Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }}</span><br>
+                  <span style="color: var(--emerald-700); font-weight: 600;">Govt: PKR {{ "{:,.2f}".format(eq.govt_subsidy_amount) }}</span> | 
+                  <span style="color: var(--emerald-600);">Farmer: PKR {{ "{:,.2f}".format(eq.farmer_price) }}</span>
+                </li>
+              {% endfor %}
+              </ul>
+            {% else %}
+              <span style="color: var(--ink-500); font-style: italic; font-size: 0.82rem;">No equipment selected</span>
+            {% endif %}
+          </td>
+
+          <!-- Photo Verification Status Badges -->
+          <td style="padding: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.78rem;">
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.group_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.group_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Group Photo
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Group Photo
+                {% endif %}
+              </span>
+
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.farmer_with_equipment_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.farmer_with_equipment_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Farmer+Eq Photo
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Farmer+Eq Photo
+                {% endif %}
+              </span>
+
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.qr_tracker_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.qr_tracker_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> QR Tracker
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> QR Tracker
+                {% endif %}
+              </span>
+
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.imposed_id_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.imposed_id_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Imposed ID
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Imposed ID
+                {% endif %}
+              </span>
+
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.govt_plate_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.govt_plate_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Govt Plate
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Govt Plate
+                {% endif %}
+              </span>
+
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.cnic_front_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.cnic_front_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> CNIC Front
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> CNIC Front
+                {% endif %}
+              </span>
+
+              <span style="display: flex; align-items: center; gap: 0.35rem; color: {% if en.cnic_back_photo %}var(--emerald-600){% else %}var(--rose-500){% endif %};">
+                {% if en.cnic_back_photo %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> CNIC Back
+                {% else %}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> CNIC Back
+                {% endif %}
+              </span>
+            </div>
+          </td>
+
+          <!-- Status -->
+          <td style="padding: 1rem;">
+            {% if is_complete %}
+              <span class="status-pill complete">Completed</span>
+            {% else %}
+              <span class="status-pill pending">Pending</span>
+            {% endif %}
+          </td>
+
+          <!-- Quick Action -->
+          <td style="padding: 1rem; text-align: right; white-space: nowrap;">
+            <a href="{{ url_for('farmer_view', farmer_id=farmer.id) }}" class="btn btn-secondary btn-sm" title="View Farmer Profile">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              View Farmer Profile
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Card Stack View -->
+  <div class="program-detail-card-stack" style="display: none; padding: 1rem; flex-direction: column; gap: 1rem;">
+    {% for en in program.enrollments %}
+    {% set farmer = en.farmer %}
+    {% set is_complete = en.group_photo and en.farmer_with_equipment_photo and en.qr_tracker_photo and en.imposed_id_photo and en.govt_plate_photo and en.cnic_front_photo and en.cnic_back_photo %}
+    <div class="card" style="padding: 1rem; background: var(--bg-app); border: 1px solid #E2E8F0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: var(--emerald-50); border: 1.5px solid var(--emerald-100);">
+            {% if farmer.photo_path %}
+            <img src="{{ url_for('serve_upload', filename=farmer.photo_path) }}" alt="{{ farmer.full_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--emerald-700);">
+              {{ farmer.full_name[:2]|upper }}
+            </div>
+            {% endif %}
+          </div>
+          <div>
+            <a href="{{ url_for('farmer_view', farmer_id=farmer.id) }}" style="color: var(--emerald-600); text-decoration: none; font-weight: 700;">
+              <strong style="color: var(--emerald-600); font-size: 0.95rem;">{{ farmer.full_name }}</strong>
+            </a>
+            <div style="color: var(--ink-500); font-size: 0.78rem;">CNIC: {{ farmer.cnic }}</div>
+          </div>
+        </div>
+        <span class="status-pill {% if is_complete %}complete{% else %}pending{% endif %}">
+          {% if is_complete %}Completed{% else %}Pending{% endif %}
+        </span>
+      </div>
+
+      <div style="font-size: 0.82rem; color: var(--ink-700); margin-bottom: 0.75rem;">
+        <div><strong>Father Name:</strong> {{ farmer.father_name }}</div>
+        <div><strong>Enrolled Date:</strong> {{ en.enrolled_at|pkt_time }}</div>
+        <div style="margin-top: 0.35rem;">
+          <strong>Equipment Selected:</strong>
+          {% if en.selected_equipment %}
+            <ul style="padding-left: 1.1rem; margin-top: 0.25rem;">
+            {% for eq in en.selected_equipment %}
+              <li>Actual: PKR {{ "{:,.2f}".format(eq.actual_price) }} | Govt: PKR {{ "{:,.2f}".format(eq.govt_subsidy_amount) }}</li>
+            {% endfor %}
+            </ul>
+          {% else %}
+            <span style="color: var(--ink-500); font-style: italic;">None</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <a href="{{ url_for('farmer_view', farmer_id=farmer.id) }}" class="btn btn-secondary btn-sm">
+          View Farmer Profile
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+
+  <!-- Empty State -->
+  <div style="text-align: center; padding: 4rem 1.5rem;">
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--emerald-50); color: var(--emerald-600); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--ink-900); margin-bottom: 0.35rem;">No Farmers Enrolled Yet</h4>
+    <p style="color: var(--ink-500); font-size: 0.9rem; max-width: 420px; margin: 0 auto 1.5rem auto;">
+      No farmers enrolled in this program yet. Enroll farmers from the Farmer Profile page.
+    </p>
+    {% if current_user.has_perm('farmer_edit') %}
+    <a href="{{ url_for('farmer_form') }}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Enroll New Farmer
+    </a>
+    {% endif %}
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

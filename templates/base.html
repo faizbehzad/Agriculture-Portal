@@ -85,16 +85,21 @@
     </aside>
     {% endif %}
 
+    <!-- Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+
     <!-- Main Wrapper -->
     <div class="main-wrapper" {% if not current_user.is_authenticated %}style="margin-left: 0;"{% endif %}>
       {% if current_user.is_authenticated %}
       <header class="top-header">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <button class="mobile-nav-toggle" onclick="document.getElementById('sidebar').classList.toggle('mobile-open')">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-          <div class="page-title">
-            <h2>{% block page_title %}{% endblock %}</h2>
+        <div style="display: flex; align-items: center; gap: 1rem; width: 100%; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <button class="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-label="Toggle navigation">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="page-title">
+              <h2>{% block page_title %}{% endblock %}</h2>
+            </div>
           </div>
         </div>
         

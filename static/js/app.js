@@ -1,12 +1,40 @@
-/* Agricultural Engineering Portal - Core Application JS */
+function toggleMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) {
+    sidebar.classList.toggle('mobile-open');
+    if (backdrop) {
+      if (sidebar.classList.contains('mobile-open')) {
+        backdrop.classList.add('active');
+      } else {
+        backdrop.classList.remove('active');
+      }
+    }
+  }
+}
 
-document.addEventListener('DOMContentLoaded', () => {
+function closeMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (backdrop) backdrop.classList.remove('active');
+}
+
+function runInit() {
   initCNICFormatter();
   initPhoneRepeater();
+  initDocumentRepeater();
   initViewToggle();
   initEquipmentCalculators();
   initToastManager();
-});
+  initThumbnailUpload();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runInit);
+} else {
+  runInit();
+}
 
 // Toast Manager
 function showToast(message, type = 'success') {
@@ -16,7 +44,7 @@ function showToast(message, type = 'success') {
     container.className = 'toast-container';
     document.body.appendChild(container);
   }
-  
+
   const toast = document.createElement('div');
   toast.className = `toast ${type === 'error' ? 'toast-error' : ''}`;
   toast.innerHTML = `
@@ -28,7 +56,7 @@ function showToast(message, type = 'success') {
     <span>${message}</span>
   `;
   container.appendChild(toast);
-  
+
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateX(100%)';
@@ -41,22 +69,22 @@ function showToast(message, type = 'success') {
 function initCNICFormatter() {
   const cnicInput = document.getElementById('cnic');
   const farmerIdInput = document.getElementById('farmer_id');
-  
+
   if (!cnicInput) return;
-  
+
   cnicInput.addEventListener('input', (e) => {
     let value = e.target.value.replace(/\D/g, ''); // strip non-digits
     if (value.length > 13) value = value.substring(0, 13);
-    
+
     let formatted = value;
     if (value.length > 5 && value.length <= 12) {
       formatted = `${value.substring(0, 5)}-${value.substring(5)}`;
     } else if (value.length > 12) {
       formatted = `${value.substring(0, 5)}-${value.substring(5, 12)}-${value.substring(12)}`;
     }
-    
+
     e.target.value = formatted;
-    
+
     // Auto-derive Farmer ID (middle 7 digits)
     if (value.length >= 12 && farmerIdInput) {
       const middleSeven = value.substring(5, 12);
@@ -71,9 +99,9 @@ function initCNICFormatter() {
 function initPhoneRepeater() {
   const addBtn = document.getElementById('add-phone-btn');
   const container = document.getElementById('phone-repeater-container');
-  
+
   if (!addBtn || !container) return;
-  
+
   addBtn.addEventListener('click', () => {
     const count = container.children.length;
     const div = document.createElement('div');
@@ -103,7 +131,7 @@ function initPhoneRepeater() {
       </div>
     `;
     container.appendChild(div);
-    
+
     div.querySelector('.remove-phone-btn').addEventListener('click', () => {
       div.remove();
     });
@@ -116,13 +144,69 @@ function initPhoneRepeater() {
   });
 }
 
+// Land Document Repeater (Section 4 - Farmer Form)
+function initDocumentRepeater() {
+  const addBtn = document.getElementById('add-document-btn');
+  const container = document.getElementById('document-repeater-container');
+
+  if (!addBtn || !container) return;
+
+  addBtn.addEventListener('click', () => {
+    const div = document.createElement('div');
+    div.className = 'form-row document-row mb-2';
+    div.innerHTML = `
+      <div class="form-group" style="flex: 1;">
+        <select name="doc_type[]" class="form-control" required>
+          <option value="Registry">Registry</option>
+          <option value="Fard">Fard</option>
+          <option value="Mutation">Mutation</option>
+          <option value="Lease Agreement">Lease Agreement</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <input type="file" name="doc_file[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+      </div>
+      <div class="form-group" style="width: auto; display: flex; align-items: center;">
+        <button type="button" class="btn btn-icon text-danger remove-document-btn" title="Remove">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `;
+    container.appendChild(div);
+
+    div.querySelector('.remove-document-btn').addEventListener('click', () => {
+      const rows = container.querySelectorAll('.document-row');
+      if (rows.length > 1) {
+        div.remove();
+      } else {
+        div.querySelectorAll('input[type="file"]').forEach(input => input.value = '');
+        div.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
+      }
+    });
+  });
+
+  container.querySelectorAll('.remove-document-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const rows = container.querySelectorAll('.document-row');
+      const row = e.target.closest('.document-row');
+      if (rows.length > 1) {
+        row.remove();
+      } else {
+        row.querySelectorAll('input[type="file"]').forEach(input => input.value = '');
+        row.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
+      }
+    });
+  });
+}
+
 // Cookie-Persisted Farmers Grid/List Toggle
 function initViewToggle() {
   const toggleGrid = document.getElementById('view-toggle-grid');
   const toggleList = document.getElementById('view-toggle-list');
   const gridContainer = document.getElementById('farmers-grid-view');
   const listContainer = document.getElementById('farmers-list-view');
-  
+
   if (!toggleGrid || !toggleList || !gridContainer || !listContainer) return;
 
   function setView(mode) {
@@ -158,15 +242,15 @@ function initViewToggle() {
 function initEquipmentCalculators() {
   const container = document.getElementById('equipment-repeater-container');
   const addBtn = document.getElementById('add-equipment-btn');
-  
+
   if (!container || !addBtn) return;
-  
+
   function bindCalc(row) {
     const priceInput = row.querySelector('.actual-price');
     const subsidyInput = row.querySelector('.subsidy-pct');
     const govtSpan = row.querySelector('.govt-share');
     const farmerSpan = row.querySelector('.farmer-share');
-    
+
     function recalculate() {
       const price = parseFloat(priceInput.value) || 0;
       const pct = parseFloat(subsidyInput.value) || 60;
@@ -186,6 +270,7 @@ function initEquipmentCalculators() {
     const row = document.createElement('div');
     row.className = 'form-row equipment-row mb-3 p-3 card';
     row.innerHTML = `
+      <input type="hidden" name="equipment_id[]" value="">
       <div class="form-group" style="flex: 2;">
         <label class="form-label">Equipment Name</label>
         <input type="text" name="equipment_name[]" class="form-control" placeholder="e.g. Laser Land Leveler" required>
@@ -211,6 +296,73 @@ function initEquipmentCalculators() {
     bindCalc(row);
     row.querySelector('.remove-eq-btn').addEventListener('click', () => row.remove());
   });
+}
+
+// Program Thumbnail Upload — preview, validation, remove
+function initThumbnailUpload() {
+  const input = document.getElementById('thumbnail');
+  if (!input) return; // only present on the Program form
+
+  const previewWrap = document.getElementById('thumbnail-preview-wrap');
+  const previewImg = document.getElementById('thumbnail-preview-img');
+  const removeBtn = document.getElementById('remove-thumbnail-btn');
+  const errorEl = document.getElementById('thumbnail-error');
+  const removeFlag = document.getElementById('remove_thumbnail');
+
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  function showError(message) {
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+  }
+
+  function clearError() {
+    if (!errorEl) return;
+    errorEl.textContent = '';
+    errorEl.style.display = 'none';
+  }
+
+  input.addEventListener('change', () => {
+    clearError();
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      showError('Only JPG, PNG, or WEBP images are allowed.');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > MAX_SIZE) {
+      showError('File is too large. Maximum size is 2MB.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (previewImg) previewImg.src = e.target.result;
+      if (previewWrap) previewWrap.style.display = 'flex';
+      if (removeFlag) removeFlag.value = '0'; // new file chosen, cancel any pending removal
+    };
+    reader.readAsDataURL(file);
+  });
+
+  if (removeBtn) {
+    removeBtn.addEventListener('click', (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      try { input.value = ''; } catch(err) {}
+      clearError();
+      if (previewWrap) previewWrap.style.display = 'none';
+      if (previewImg) previewImg.src = '';
+      if (removeFlag) removeFlag.value = '1'; // tell backend to clear the stored thumbnail
+    });
+  }
 }
 
 // Modal helper

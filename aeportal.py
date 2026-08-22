@@ -26,25 +26,31 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Config
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-aeportal-secret-key-12345')
 
 from urllib.parse import quote_plus
 
-# DB Configuration (MySQL PyMySQL vs SQLite local fallback)
-db_host = os.environ.get('DB_HOST', 'localhost')
-db_name = os.environ.get('DB_NAME', '')
-db_user = os.environ.get('DB_USER', '')
-db_pass = os.environ.get('DB_PASS', '')
+# DB Configuration (MySQL phpMyAdmin / PyMySQL for production, SQLite fallback for local development)
+host = os.environ.get('DB_HOST', 'localhost')
+user = os.environ.get('DB_USER', 'cpanel_username_dbuser')
+password = os.environ.get('DB_PASS', 'db_password')
+database = os.environ.get('DB_NAME', 'cpanel_username_dbname')
 
-if db_name and db_user:
-    encoded_pass = quote_plus(db_pass) if db_pass else ''
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{db_user}:{encoded_pass}@{db_host}/{db_name}?charset=utf8mb4"
-else:
-    db_path = os.path.join(os.path.dirname(__file__), 'aeportal.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+db_path = os.path.join(os.path.dirname(__file__), 'aeportal.db')
+sqlite_uri = f"sqlite:///{db_path}"
+
+# Try MySQL connection if configured and reachable; fallback to SQLite for local execution if MySQL is absent
+try:
+    import pymysql
+    conn = pymysql.connect(host=host, user=user, password=password, database=database, connect_timeout=2)
+    conn.close()
+    encoded_pass = quote_plus(password) if password else ''
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{user}:{encoded_pass}@{host}/{database}?charset=utf8mb4"
+except Exception:
+    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_uri
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('UPLOAD_MAX_MB', 100)) * 1024 * 1024
@@ -131,6 +137,10 @@ class Farmer(db.Model):
     land_value = db.Column(db.Numeric(10, 2), nullable=True)
     land_unit = db.Column(db.String(20), default='acre')
     photo_path = db.Column(db.String(255), nullable=True)
+    house_address = db.Column(db.String(255), nullable=True)
+    city_tehsil = db.Column(db.String(100), nullable=True)
+    district = db.Column(db.String(100), nullable=True)
+    province = db.Column(db.String(100), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     updated_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -138,6 +148,16 @@ class Farmer(db.Model):
 
     phones = db.relationship('FarmerPhone', backref='farmer', cascade='all, delete-orphan')
     enrollments = db.relationship('FarmerProgram', backref='farmer', cascade='all, delete-orphan')
+
+class LandDocument(db.Model):
+    __tablename__ = 'land_documents'
+    id = db.Column(db.Integer, primary_key=True)
+    farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id'), nullable=False)
+    doc_type = db.Column(db.String(50), nullable=False)
+    file_path = db.Column(db.String(255), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    farmer = db.relationship('Farmer', backref=db.backref('land_documents', cascade='all, delete-orphan'))
 
 class FarmerPhone(db.Model):
     __tablename__ = 'farmer_phones'
@@ -155,6 +175,7 @@ class Program(db.Model):
     color_hex = db.Column(db.String(7), nullable=False, default='#2F7A4C')
     has_expiry = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime, nullable=True)
+    thumbnail_path = db.Column(db.String(255), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -188,6 +209,9 @@ class FarmerProgram(db.Model):
     qr_tracker_photo = db.Column(db.String(255), nullable=True)
     imposed_id_photo = db.Column(db.String(255), nullable=True)
     govt_plate_photo = db.Column(db.String(255), nullable=True)
+    cnic_front_photo = db.Column(db.String(255), nullable=True)
+    cnic_back_photo = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='Active')
 
     selected_equipment = db.relationship('FarmerProgramEquipment', backref='farmer_program', cascade='all, delete-orphan')
 
@@ -199,6 +223,8 @@ class FarmerProgramEquipment(db.Model):
     actual_price = db.Column(db.Numeric(12, 2), nullable=False)
     govt_subsidy_amount = db.Column(db.Numeric(12, 2), nullable=False)
     farmer_price = db.Column(db.Numeric(12, 2), nullable=False)
+
+    equipment = db.relationship('Equipment')
 
 class GalleryMedia(db.Model):
     __tablename__ = 'gallery_media'
@@ -274,6 +300,35 @@ def ensure_db_seeded():
             db.session.add(naem)
 
         db.session.commit()
+
+        # Database Auto-Migration Check for Farmers & FarmerProgram columns
+        try:
+            bind = db.engine
+            from sqlalchemy import inspect
+            inspector = inspect(bind)
+            columns = [c['name'] for c in inspector.get_columns('farmers')]
+            
+            if 'house_address' not in columns:
+                db.session.execute(db.text("ALTER TABLE farmers ADD COLUMN house_address VARCHAR(255) NULL"))
+            if 'city_tehsil' not in columns:
+                db.session.execute(db.text("ALTER TABLE farmers ADD COLUMN city_tehsil VARCHAR(100) NULL"))
+            if 'district' not in columns:
+                db.session.execute(db.text("ALTER TABLE farmers ADD COLUMN district VARCHAR(100) NULL"))
+            if 'province' not in columns:
+                db.session.execute(db.text("ALTER TABLE farmers ADD COLUMN province VARCHAR(100) NULL"))
+            
+            columns_fp = [c['name'] for c in inspector.get_columns('farmer_programs')]
+            if 'status' not in columns_fp:
+                db.session.execute(db.text("ALTER TABLE farmer_programs ADD COLUMN status VARCHAR(20) DEFAULT 'Active' NOT NULL"))
+            if 'cnic_front_photo' not in columns_fp:
+                db.session.execute(db.text("ALTER TABLE farmer_programs ADD COLUMN cnic_front_photo VARCHAR(255) NULL"))
+            if 'cnic_back_photo' not in columns_fp:
+                db.session.execute(db.text("ALTER TABLE farmer_programs ADD COLUMN cnic_back_photo VARCHAR(255) NULL"))
+                
+            db.session.commit()
+        except Exception as e:
+            print("DB Schema Migration check warning:", e)
+            db.session.rollback()
 
 # Ensure DB tables & default admin accounts exist automatically
 ensure_db_seeded()
@@ -400,9 +455,37 @@ def dashboard():
     total_equipment = FarmerProgramEquipment.query.count()
     total_files = GalleryMedia.query.count()
     
-    # Storage Used
+    # Authentic Real Storage Calculation (Scans actual uploads directory on disk)
+    upload_dir = app.config.get('UPLOAD_FOLDER', os.path.join(basedir, 'uploads'))
+    total_bytes = 0
+    if os.path.exists(upload_dir):
+        for root_dir, _, filenames in os.walk(upload_dir):
+            for fn in filenames:
+                try:
+                    fp = os.path.join(root_dir, fn)
+                    total_bytes += os.path.getsize(fp)
+                except OSError:
+                    pass
+    
     gallery_bytes = db.session.query(db.func.sum(GalleryMedia.size_bytes)).scalar() or 0
-    storage_gb = round(gallery_bytes / (1024 * 1024 * 1024), 2)
+    total_bytes = max(total_bytes, gallery_bytes)
+
+    storage_used_mb = round(total_bytes / (1024 * 1024), 2)
+    storage_used_gb = round(total_bytes / (1024 * 1024 * 1024), 3)
+
+    storage_total_gb = float(os.environ.get('STORAGE_TOTAL_GB', 10.0))
+    storage_total_bytes = storage_total_gb * 1024 * 1024 * 1024
+
+    storage_percent = round((total_bytes / storage_total_bytes) * 100, 2) if storage_total_bytes > 0 else 0.0
+    if storage_percent > 100.0:
+        storage_percent = 100.0
+
+    if storage_used_gb >= 0.1:
+        storage_used_str = f"{round(storage_used_gb, 2)} GB"
+    else:
+        storage_used_str = f"{storage_used_mb} MB"
+    
+    storage_total_str = f"{int(storage_total_gb) if storage_total_gb.is_integer() else storage_total_gb} GB"
     
     # Total Subsidy Disbursed
     total_subsidy = db.session.query(db.func.sum(FarmerProgramEquipment.govt_subsidy_amount)).scalar() or 0.00
@@ -422,7 +505,10 @@ def dashboard():
         total_farmers=total_farmers,
         total_equipment=total_equipment,
         total_files=total_files,
-        storage_gb=storage_gb,
+        storage_gb=storage_used_gb,
+        storage_used=storage_used_str,
+        storage_total=storage_total_str,
+        storage_percent=storage_percent,
         total_subsidy=total_subsidy,
         pending_count=pending_count,
         recent_sessions=recent_sessions
@@ -506,6 +592,11 @@ def farmer_form(id=None):
             flash(f"A farmer with CNIC {cnic} already exists.", "error")
             return render_template('farmers/form.html', farmer=farmer, programs=programs, total_subsidy_received=0, total_amount_paid=0)
 
+        house_address = request.form.get('house_address', '').strip() or None
+        city_tehsil = request.form.get('city_tehsil', '').strip() or None
+        district = request.form.get('district', '').strip() or None
+        province = request.form.get('province', '').strip() or None
+
         if not farmer:
             farmer = Farmer(
                 farmer_id=farmer_id,
@@ -515,6 +606,10 @@ def farmer_form(id=None):
                 email=email,
                 land_value=land_value,
                 land_unit=land_unit,
+                house_address=house_address,
+                city_tehsil=city_tehsil,
+                district=district,
+                province=province,
                 created_by=current_user.id,
                 updated_by=current_user.id
             )
@@ -529,6 +624,10 @@ def farmer_form(id=None):
             farmer.email = email
             farmer.land_value = land_value
             farmer.land_unit = land_unit
+            farmer.house_address = house_address
+            farmer.city_tehsil = city_tehsil
+            farmer.district = district
+            farmer.province = province
             farmer.updated_by = current_user.id
             log_action = "Updated farmer profile"
 
@@ -541,6 +640,7 @@ def farmer_form(id=None):
             file.save(path)
             farmer.photo_path = f"farmers/{farmer.id}/{fname}"
 
+        # Phone numbers
         FarmerPhone.query.filter_by(farmer_id=farmer.id).delete()
         providers = request.form.getlist('phone_provider[]')
         numbers = request.form.getlist('phone_number[]')
@@ -550,6 +650,84 @@ def farmer_form(id=None):
             if num.strip():
                 is_pri = (idx == primary_idx)
                 db.session.add(FarmerPhone(farmer_id=farmer.id, provider=prov, number=num.strip(), is_primary=is_pri))
+
+        # Land Documents
+        doc_types = request.form.getlist('doc_type[]')
+        doc_files = request.files.getlist('doc_file[]')
+        existing_docs = LandDocument.query.filter_by(farmer_id=farmer.id).all()
+        new_docs = []
+        
+        for i, dtype in enumerate(doc_types):
+            file_path = None
+            if i < len(existing_docs):
+                file_path = existing_docs[i].file_path
+            
+            if i < len(doc_files) and doc_files[i] and doc_files[i].filename:
+                f = doc_files[i]
+                fname = secure_filename(f"doc_{i}_{int(datetime.utcnow().timestamp())}_{f.filename}")
+                up_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'farmers', str(farmer.id), 'documents')
+                os.makedirs(up_dir, exist_ok=True)
+                fpath = os.path.join(up_dir, fname)
+                f.save(fpath)
+                
+                if file_path:
+                    old_fpath = os.path.join(app.config['UPLOAD_FOLDER'], file_path)
+                    if os.path.exists(old_fpath):
+                        try:
+                            os.remove(old_fpath)
+                        except OSError:
+                            pass
+                
+                file_path = f"farmers/{farmer.id}/documents/{fname}"
+                
+            if file_path:
+                new_docs.append(LandDocument(
+                    farmer_id=farmer.id,
+                    doc_type=dtype,
+                    file_path=file_path
+                ))
+                
+        LandDocument.query.filter_by(farmer_id=farmer.id).delete()
+        for nd in new_docs:
+            db.session.add(nd)
+
+        # Inline Program Enrollment (When creating a new farmer or enrolling from form)
+        enroll_program_id = request.form.get('enroll_program_id', type=int)
+        if enroll_program_id:
+            prog = Program.query.get(enroll_program_id)
+            if prog:
+                existing_en = FarmerProgram.query.filter_by(farmer_id=farmer.id, program_id=prog.id).first()
+                if not existing_en:
+                    enrollment = FarmerProgram(farmer_id=farmer.id, program_id=prog.id, enrolled_at=datetime.utcnow(), status='Active')
+                    db.session.add(enrollment)
+                    db.session.flush()
+
+                    eq_ids = request.form.getlist('enroll_equipment_ids[]')
+                    for eq_id in eq_ids:
+                        eq = Equipment.query.filter_by(id=eq_id, program_id=prog.id).first()
+                        if eq:
+                            govt_sub = eq.actual_price * (eq.subsidy_pct / 100)
+                            f_price = eq.actual_price - govt_sub
+                            fpe = FarmerProgramEquipment(
+                                farmer_program_id=enrollment.id,
+                                equipment_id=eq.id,
+                                actual_price=eq.actual_price,
+                                govt_subsidy_amount=govt_sub,
+                                farmer_price=f_price
+                            )
+                            db.session.add(fpe)
+
+                    photo_fields = ['group_photo', 'farmer_with_equipment_photo', 'qr_tracker_photo', 'imposed_id_photo', 'govt_plate_photo', 'cnic_front_photo', 'cnic_back_photo']
+                    up_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'farmers', str(farmer.id), f"prog_{prog.id}")
+                    os.makedirs(up_dir, exist_ok=True)
+
+                    for field in photo_fields:
+                        if field in request.files and request.files[field].filename:
+                            f = request.files[field]
+                            fname = secure_filename(f"{field}_{enrollment.id}_{f.filename}")
+                            fpath = os.path.join(up_dir, fname)
+                            f.save(fpath)
+                            setattr(enrollment, field, f"farmers/{farmer.id}/prog_{prog.id}/{fname}")
 
         db.session.commit()
         log_activity(log_action, entity_type="farmer", entity_id=farmer.id, details={"name": farmer.full_name, "cnic": farmer.cnic})
@@ -587,7 +765,7 @@ def farmer_enroll_program(id):
     db.session.add(enrollment)
     db.session.flush()
 
-    photo_fields = ['group_photo', 'farmer_with_equipment_photo', 'qr_tracker_photo', 'imposed_id_photo', 'govt_plate_photo']
+    photo_fields = ['group_photo', 'farmer_with_equipment_photo', 'qr_tracker_photo', 'imposed_id_photo', 'govt_plate_photo', 'cnic_front_photo', 'cnic_back_photo']
     up_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'farmers', str(farmer.id), f"prog_{program.id}")
     os.makedirs(up_dir, exist_ok=True)
 
@@ -626,6 +804,41 @@ def farmer_view_modal(id):
     status = calculate_farmer_status(farmer)
     return render_template('farmers/view_modal.html', farmer=farmer, status=status)
 
+@app.route('/farmer/<int:farmer_id>/view')
+@app.route('/farmers/<int:farmer_id>/view')
+@login_required
+def farmer_view(farmer_id):
+    if not current_user.has_perm('farmer_view'):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('farmers_list'))
+    
+    farmer = Farmer.query.options(
+        db.joinedload(Farmer.phones),
+        db.joinedload(Farmer.land_documents),
+        db.joinedload(Farmer.enrollments).joinedload(FarmerProgram.program),
+        db.joinedload(Farmer.enrollments).joinedload(FarmerProgram.selected_equipment)
+    ).get_or_404(farmer_id)
+    
+    status = calculate_farmer_status(farmer)
+    
+    total_subsidy_received = 0.00
+    total_amount_paid = 0.00
+    for en in farmer.enrollments:
+        for eq in en.selected_equipment:
+            total_subsidy_received += float(eq.govt_subsidy_amount or 0)
+            total_amount_paid += float(eq.farmer_price or 0)
+            
+    # Safely get back url or redirect to farmer list
+    back_url = request.referrer or url_for('farmers_list')
+    
+    return render_template('farmers/view.html',
+        farmer=farmer,
+        status=status,
+        total_subsidy_received=total_subsidy_received,
+        total_amount_paid=total_amount_paid,
+        back_url=back_url
+    )
+
 @app.route('/farmers/<int:id>/delete', methods=['POST'])
 @login_required
 def farmer_delete(id):
@@ -655,8 +868,44 @@ def programs_list():
     if search:
         query = query.filter(Program.name.ilike(f"%{search}%"))
 
-    programs = query.order_by(Program.created_at.desc()).all()
+    programs = query.options(
+        db.joinedload(Program.enrollments),
+        db.joinedload(Program.equipment)
+    ).order_by(Program.created_at.desc()).all()
     return render_template('programs/list.html', programs=programs, search=search)
+
+@app.route('/programs/<int:id>')
+@app.route('/program/<int:id>')
+@app.route('/programs/<int:id>/details')
+@login_required
+def program_detail(id):
+    if not current_user.has_perm('program_view'):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('dashboard'))
+
+    program = Program.query.options(
+        db.joinedload(Program.enrollments).joinedload(FarmerProgram.farmer),
+        db.joinedload(Program.enrollments).joinedload(FarmerProgram.selected_equipment),
+        db.joinedload(Program.equipment)
+    ).get_or_404(id)
+
+    track_progress('program_detail', entity_type='program', entity_id=program.id)
+
+    total_farmers = len(program.enrollments)
+    total_subsidy_disbursed = 0.0
+    total_farmer_contribution = 0.0
+
+    for en in program.enrollments:
+        for eq in en.selected_equipment:
+            total_subsidy_disbursed += float(eq.govt_subsidy_amount or 0)
+            total_farmer_contribution += float(eq.farmer_price or 0)
+
+    return render_template('programs/detail.html',
+        program=program,
+        total_farmers=total_farmers,
+        total_subsidy_disbursed=total_subsidy_disbursed,
+        total_farmer_contribution=total_farmer_contribution
+    )
 
 @app.route('/programs/add', methods=['GET', 'POST'])
 @app.route('/programs/<int:id>/edit', methods=['GET', 'POST'])
@@ -666,7 +915,10 @@ def program_form(id=None):
         flash('Permission denied.', 'error')
         return redirect(url_for('programs_list'))
 
-    program = Program.query.get_or_404(id) if id else None
+    program = Program.query.options(
+        db.joinedload(Program.enrollments).joinedload(FarmerProgram.farmer),
+        db.joinedload(Program.enrollments).joinedload(FarmerProgram.selected_equipment)
+    ).get_or_404(id) if id else None
     
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -705,23 +957,94 @@ def program_form(id=None):
             program.expires_at = expires_at
             log_act = "Updated program scheme"
 
-        Equipment.query.filter_by(program_id=program.id).delete()
+        eq_ids = request.form.getlist('equipment_id[]')
         eq_names = request.form.getlist('equipment_name[]')
         actual_prices = request.form.getlist('actual_price[]')
         subsidy_pcts = request.form.getlist('subsidy_pct[]')
 
-        for eq_n, a_p, s_p in zip(eq_names, actual_prices, subsidy_pcts):
+        if not eq_ids:
+            eq_ids = [''] * len(eq_names)
+
+        kept_eq_ids = []
+        for eq_id_str, eq_n, a_p, s_p in zip(eq_ids, eq_names, actual_prices, subsidy_pcts):
             if eq_n.strip() and a_p:
                 act_p = float(a_p)
                 sub_pct = float(s_p) if s_p else 60.00
                 f_p = act_p * (1 - sub_pct / 100)
-                db.session.add(Equipment(
-                    program_id=program.id,
-                    name=eq_n.strip(),
-                    actual_price=act_p,
-                    subsidy_pct=sub_pct,
-                    farmer_price=f_p
-                ))
+                
+                eq_item = None
+                if eq_id_str and str(eq_id_str).isdigit():
+                    eq_item = Equipment.query.filter_by(id=int(eq_id_str), program_id=program.id).first()
+
+                if eq_item:
+                    eq_item.name = eq_n.strip()
+                    eq_item.actual_price = act_p
+                    eq_item.subsidy_pct = sub_pct
+                    eq_item.farmer_price = f_p
+                else:
+                    eq_item = Equipment(
+                        program_id=program.id,
+                        name=eq_n.strip(),
+                        actual_price=act_p,
+                        subsidy_pct=sub_pct,
+                        farmer_price=f_p
+                    )
+                    db.session.add(eq_item)
+                    db.session.flush()
+                kept_eq_ids.append(eq_item.id)
+
+        old_eqs = Equipment.query.filter_by(program_id=program.id).all()
+        for old_eq in old_eqs:
+            if old_eq.id not in kept_eq_ids:
+                is_referenced = FarmerProgramEquipment.query.filter_by(equipment_id=old_eq.id).first()
+                if not is_referenced:
+                    db.session.delete(old_eq)
+
+        # Thumbnail upload handling
+        remove_thumbnail = request.form.get('remove_thumbnail') in ('1', 'true', 'yes')
+        if remove_thumbnail:
+            if program.thumbnail_path:
+                old_path = os.path.join(app.config['UPLOAD_FOLDER'], program.thumbnail_path)
+                if os.path.exists(old_path):
+                    try:
+                        os.remove(old_path)
+                    except OSError:
+                        pass
+            program.thumbnail_path = None
+        elif 'thumbnail' in request.files and request.files['thumbnail'].filename:
+            thumb_file = request.files['thumbnail']
+            allowed_ext = {'jpg', 'jpeg', 'png', 'webp'}
+            orig_name = thumb_file.filename
+            ext = orig_name.rsplit('.', 1)[-1].lower() if '.' in orig_name else ''
+
+            if ext not in allowed_ext:
+                flash('Thumbnail must be JPG, PNG, or WEBP.', 'error')
+                db.session.rollback()
+                return render_template('programs/form.html', program=program)
+
+            thumb_file.seek(0, os.SEEK_END)
+            size = thumb_file.tell()
+            thumb_file.seek(0)
+            if size > 2 * 1024 * 1024:
+                flash('Thumbnail file is too large. Maximum size is 2MB.', 'error')
+                db.session.rollback()
+                return render_template('programs/form.html', program=program)
+
+            fname = secure_filename(f"program_{program.id}_{orig_name}")
+            up_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'programs', str(program.id))
+            os.makedirs(up_dir, exist_ok=True)
+            path = os.path.join(up_dir, fname)
+            thumb_file.save(path)
+
+            if program.thumbnail_path and program.thumbnail_path != f"programs/{program.id}/{fname}":
+                old_path = os.path.join(app.config['UPLOAD_FOLDER'], program.thumbnail_path)
+                if os.path.exists(old_path):
+                    try:
+                        os.remove(old_path)
+                    except OSError:
+                        pass
+
+            program.thumbnail_path = f"programs/{program.id}/{fname}"
 
         db.session.commit()
         log_activity(log_act, entity_type="program", entity_id=program.id, details={"name": program.name})
@@ -729,6 +1052,93 @@ def program_form(id=None):
         return redirect(url_for('programs_list'))
 
     return render_template('programs/form.html', program=program)
+
+@app.route('/api/farmers/search')
+@login_required
+def api_farmers_search():
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify([])
+    farmers = Farmer.query.filter(
+        db.or_(Farmer.full_name.ilike(f"%{q}%"), Farmer.cnic.ilike(f"%{q}%"))
+    ).limit(10).all()
+    
+    return jsonify([{
+        'id': f.id,
+        'full_name': f.full_name,
+        'cnic': f.cnic,
+        'farmer_id': f.farmer_id
+    } for f in farmers])
+
+@app.route('/programs/<int:program_id>/enroll-farmer', methods=['POST'])
+@login_required
+def api_program_enroll_farmer(program_id):
+    if not current_user.has_perm('program_edit') or not current_user.has_perm('farmer_edit'):
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    program = Program.query.get_or_404(program_id)
+    farmer_id = request.form.get('farmer_id', type=int)
+    farmer = Farmer.query.get_or_404(farmer_id)
+    
+    existing = FarmerProgram.query.filter_by(farmer_id=farmer.id, program_id=program.id).first()
+    if existing:
+        return jsonify({'error': 'Farmer is already enrolled in this program'}), 400
+        
+    enrollment = FarmerProgram(
+        farmer_id=farmer.id,
+        program_id=program.id,
+        enrolled_at=datetime.utcnow(),
+        status='Active'
+    )
+    db.session.add(enrollment)
+    db.session.flush()
+    
+    eq_ids = request.form.getlist('equipment_ids[]')
+    for eq_id in eq_ids:
+        eq = Equipment.query.filter_by(id=eq_id, program_id=program.id).first()
+        if eq:
+            govt_sub = eq.actual_price * (eq.subsidy_pct / 100)
+            f_price = eq.actual_price - govt_sub
+            fpe = FarmerProgramEquipment(
+                farmer_program_id=enrollment.id,
+                equipment_id=eq.id,
+                actual_price=eq.actual_price,
+                govt_subsidy_amount=govt_sub,
+                farmer_price=f_price
+            )
+            db.session.add(fpe)
+            
+    db.session.commit()
+    log_activity("Enrolled farmer in program via program management", entity_type="farmer_program", entity_id=enrollment.id)
+    return jsonify({'success': True})
+
+@app.route('/programs/<int:program_id>/enrollments/<int:enrollment_id>/status', methods=['POST'])
+@login_required
+def api_program_enrollment_status(program_id, enrollment_id):
+    if not current_user.has_perm('program_edit'):
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    enrollment = FarmerProgram.query.filter_by(id=enrollment_id, program_id=program_id).first_or_404()
+    status = request.form.get('status', '').strip()
+    if status not in ['Active', 'Completed', 'Dropped']:
+        return jsonify({'error': 'Invalid status'}), 400
+        
+    enrollment.status = status
+    db.session.commit()
+    log_activity("Updated enrollment status", entity_type="farmer_program", entity_id=enrollment.id, details={"status": status})
+    return jsonify({'success': True})
+
+@app.route('/programs/<int:program_id>/enrollments/<int:enrollment_id>/delete', methods=['POST'])
+@login_required
+def api_program_remove_farmer(program_id, enrollment_id):
+    if not current_user.has_perm('program_edit'):
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    enrollment = FarmerProgram.query.filter_by(id=enrollment_id, program_id=program_id).first_or_404()
+    db.session.delete(enrollment)
+    db.session.commit()
+    log_activity("Removed farmer from program", entity_type="farmer_program", entity_id=enrollment_id)
+    return jsonify({'success': True})
 
 @app.route('/programs/<int:id>/gallery', methods=['GET', 'POST'])
 @login_required
@@ -1079,4 +1489,5 @@ def serve_upload(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Local dev server runs when executed directly; cPanel uses passenger_wsgi.py
+    app.run(host='127.0.0.1', port=5001, debug=True)
